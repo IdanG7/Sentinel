@@ -202,7 +202,9 @@ class PipelineController:
         """
         deployment_id = UUID(data["deployment_id"])
         new_replicas = data["new_replicas"]
-        logger.info(f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas")
+        logger.info(
+            f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas"
+        )
 
         try:
             await self.deployment_executor.scale_deployment(deployment_id, new_replicas)
@@ -300,7 +302,10 @@ class PipelineController:
         Args:
             action_plan: Action plan to execute
         """
-        logger.info(f"Executing action plan {action_plan.id} with {len(action_plan.decisions)} decisions")
+        logger.info(
+            f"Executing action plan {action_plan.id} "
+            f"with {len(action_plan.decisions)} decisions"
+        )
 
         for decision in action_plan.decisions:
             try:
@@ -325,7 +330,9 @@ class PipelineController:
                     logger.warning(f"Unknown decision verb: {verb}")
 
             except Exception as e:
-                logger.error(f"Error executing decision {decision.verb}: {e}", exc_info=True)
+                logger.error(
+                    f"Error executing decision {decision.verb}: {e}", exc_info=True
+                )
                 # Continue with other decisions even if one fails
 
     async def _health_check_loop(self) -> None:
@@ -339,17 +346,25 @@ class PipelineController:
                 if not self._active_deployments:
                     continue
 
-                logger.debug(f"Running health checks on {len(self._active_deployments)} deployments")
+                logger.debug(
+                    f"Running health checks on {len(self._active_deployments)} deployments"
+                )
 
-                for deployment_id, deployment_data in list(self._active_deployments.items()):
+                for deployment_id, deployment_data in list(
+                    self._active_deployments.items()
+                ):
                     try:
                         is_healthy = await self.health_checker.check_deployment_health(
                             deployment_id, deployment_data
                         )
 
                         if not is_healthy and self.settings.auto_rollback_enabled:
-                            logger.warning(f"Deployment {deployment_id} unhealthy, triggering rollback")
-                            await self._handle_deployment_rollback({"deployment_id": str(deployment_id)})
+                            logger.warning(
+                                f"Deployment {deployment_id} unhealthy, triggering rollback"
+                            )
+                            await self._handle_deployment_rollback(
+                                {"deployment_id": str(deployment_id)}
+                            )
 
                     except Exception as e:
                         logger.error(f"Error checking health for {deployment_id}: {e}")

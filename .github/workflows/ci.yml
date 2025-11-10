@@ -61,9 +61,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Download Go dependencies
+      - name: Verify and download Go dependencies
         working-directory: services/agent
-        run: go mod download
+        run: |
+          go mod tidy
+          go mod verify
 
       - name: Run go vet
         working-directory: services/agent
@@ -125,9 +127,11 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Download Go dependencies
+      - name: Verify and download Go dependencies
         working-directory: services/agent
-        run: go mod download
+        run: |
+          go mod tidy
+          go mod verify
 
       - name: Run tests
         working-directory: services/agent

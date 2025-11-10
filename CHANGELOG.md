@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- CI/CD pipeline now properly installs local library dependencies before testing services
+- Go dependency management in CI using `go mod tidy` to generate go.sum
+- Integration tests now include required aiosqlite dependency
+- Black formatting issues in pipeline-controller resolved
+- Test discovery for all Python services
+
 ### Added
+- Placeholder test files for all services (control-api, pipeline-controller, infra-adapter)
+- Basic test files for Go agent (config and collector packages)
 - Phase 2 development in progress
 
 ## [0.2.0] - 2025-01-10
