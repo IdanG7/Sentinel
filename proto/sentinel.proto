@@ -12,8 +12,17 @@ service DecisionService {
   // Get action plan based on telemetry
   rpc GetActionPlan(TelemetryRef) returns (ActionPlan);
 
+  // Stream action plans from InfraMind (server-streaming)
+  rpc StreamActionPlans(ActionPlanRequest) returns (stream ActionPlan);
+
   // Acknowledge plan execution
   rpc AckPlan(PlanAck) returns (Ack);
+}
+
+// ActionPlanRequest for streaming plans
+message ActionPlanRequest {
+  string cluster_id = 1;     // Cluster identifier
+  repeated string filters = 2; // Optional filters for plan types
 }
 
 // TelemetryPoint represents a single metric observation

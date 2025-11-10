@@ -1,9 +1,10 @@
 """Action plan management endpoints."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from app.core.events import get_event_publisher
 from app.core.security import get_current_user
@@ -12,11 +13,24 @@ from app.models.schemas import (
     ActionPlanResponse,
     ActionPlanStatus,
 )
+from app.services.plan_executor import PlanExecutor
 
 router = APIRouter(prefix="/action-plans", tags=["action-plans"])
 
 # In-memory storage (replace with database)
 action_plans_db: dict[UUID, dict] = {}
+
+# Initialize plan executor (singleton)
+_plan_executor: PlanExecutor | None = None
+
+
+def get_plan_executor() -> PlanExecutor:
+    """Get or create plan executor instance."""
+    global _plan_executor
+    if _plan_executor is None:
+        event_publisher = get_event_publisher()
+        _plan_executor = PlanExecutor(event_publisher=event_publisher)
+    return _plan_executor
 
 
 @router.post("", response_model=ActionPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -93,3 +107,89 @@ async def get_action_plan(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found")
 
     return ActionPlanResponse(**plan)
+
+
+@router.post("/{plan_id}/execute", response_model=dict[str, Any])
+async def execute_action_plan(
+    plan_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user),
+    executor: PlanExecutor = Depends(get_plan_executor),
+) -> dict[str, Any]:
+    """
+    Execute an action plan.
+
+    This endpoint triggers execution of a validated action plan.
+    Execution happens in the background and can be monitored via status endpoint.
+    """
+    plan = action_plans_db.get(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found"
+        )
+
+    # Check if already executing or completed
+    if plan["status"] in [
+        ActionPlanStatus.EXECUTING.value,
+        ActionPlanStatus.COMPLETED.value,
+    ]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Plan is already {plan['status']}",
+        )
+
+    # Update status to executing
+    plan["status"] = ActionPlanStatus.EXECUTING.value
+    action_plans_db[plan_id] = plan
+
+    # Execute plan in background
+    async def execute_plan() -> None:
+        try:
+            result = await executor.execute_plan(plan_id, plan, actor=current_user)
+
+            # Update plan status on completion
+            plan["status"] = ActionPlanStatus.COMPLETED.value
+            plan["executed_at"] = result["executed_at"]
+            action_plans_db[plan_id] = plan
+
+        except Exception as e:
+            # Update plan status on failure
+            plan["status"] = ActionPlanStatus.FAILED.value
+            action_plans_db[plan_id] = plan
+
+    background_tasks.add_task(execute_plan)
+
+    return {
+        "plan_id": str(plan_id),
+        "status": "executing",
+        "message": "Plan execution started in background",
+    }
+
+
+@router.get("/{plan_id}/status", response_model=dict[str, Any])
+async def get_execution_status(
+    plan_id: UUID,
+    current_user: str = Depends(get_current_user),
+    executor: PlanExecutor = Depends(get_plan_executor),
+) -> dict[str, Any]:
+    """
+    Get execution status for an action plan.
+
+    Returns detailed execution metrics and results.
+    """
+    plan = action_plans_db.get(plan_id)
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found"
+        )
+
+    # Get execution details from executor
+    execution_status = executor.get_execution_status(plan_id)
+
+    return {
+        "plan_id": str(plan_id),
+        "status": plan["status"],
+        "created_at": plan["created_at"],
+        "executed_at": plan.get("executed_at"),
+        "execution_details": execution_status,
+    }

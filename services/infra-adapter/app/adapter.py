@@ -11,6 +11,7 @@ import httpx
 from aiokafka import AIOKafkaConsumer
 
 from .config import Settings
+from .grpc_client import InfraMindClient
 from .telemetry import TelemetryCollector
 
 logger = logging.getLogger(__name__)
@@ -39,9 +40,9 @@ class InfraMindAdapter:
 
         # Initialize components
         self.telemetry_collector = TelemetryCollector(settings)
+        self.grpc_client = InfraMindClient(settings)
         self.consumer: Optional[AIOKafkaConsumer] = None
         self.http_client: Optional[httpx.AsyncClient] = None
-        self.grpc_channel: Optional[grpc.aio.Channel] = None
 
         # Batching state
         self._telemetry_batch: list[dict[str, Any]] = []
@@ -63,19 +64,12 @@ class InfraMindAdapter:
         )
         logger.info("✓ HTTP client initialized")
 
-        # Initialize gRPC channel to InfraMind
-        if self.settings.inframind_tls_enabled:
-            # Load TLS credentials
-            with open(self.settings.inframind_tls_cert_path, 'rb') as f:
-                credentials = grpc.ssl_channel_credentials(f.read())
-            self.grpc_channel = grpc.aio.secure_channel(
-                self.settings.inframind_url, credentials
-            )
-        else:
-            self.grpc_channel = grpc.aio.insecure_channel(
-                self.settings.inframind_url
-            )
-        logger.info("✓ gRPC channel initialized")
+        # Initialize gRPC client to InfraMind
+        try:
+            await self.grpc_client.connect()
+        except Exception as e:
+            logger.warning(f"Could not connect to InfraMind: {e}")
+            logger.info("Continuing without InfraMind connection (will retry later)")
 
         # Initialize Kafka consumer for events
         self.consumer = AIOKafkaConsumer(
@@ -95,9 +89,12 @@ class InfraMindAdapter:
         event_task = asyncio.create_task(self._event_collection_loop())
         self._tasks.append(event_task)
 
-        # TODO: Start action plan receiver from InfraMind
-        # action_plan_task = asyncio.create_task(self._receive_action_plans())
-        # self._tasks.append(action_plan_task)
+        # Start action plan receiver from InfraMind
+        if self.grpc_client.connected:
+            action_plan_task = asyncio.create_task(self._receive_action_plans())
+            self._tasks.append(action_plan_task)
+        else:
+            logger.warning("Skipping action plan receiver (not connected to InfraMind)")
 
         logger.info("Adapter started")
 
@@ -121,8 +118,8 @@ class InfraMindAdapter:
         if self.http_client:
             await self.http_client.aclose()
 
-        if self.grpc_channel:
-            await self.grpc_channel.close()
+        # Disconnect from InfraMind
+        await self.grpc_client.disconnect()
 
         logger.info("Adapter stopped")
 
@@ -209,64 +206,118 @@ class InfraMindAdapter:
         logger.info(f"Sending telemetry batch of {batch_size} points to InfraMind")
 
         try:
-            # TODO: Implement gRPC call to InfraMind TelemetryIngestor
-            # For now, just log the batch
-            logger.debug(f"Telemetry batch: {self._telemetry_batch[:5]}...")  # Log first 5
-
-            # Clear batch
-            self._telemetry_batch.clear()
-            self._last_batch_time = datetime.utcnow()
-
-            logger.info(f"✓ Sent {batch_size} telemetry points")
+            # Send telemetry via gRPC
+            if self.grpc_client.connected:
+                ack = await self.grpc_client.send_telemetry_batch(self._telemetry_batch)
+                if ack.success:
+                    logger.info(f"✓ Sent {batch_size} telemetry points: {ack.message}")
+                    # Clear batch on success
+                    self._telemetry_batch.clear()
+                    self._last_batch_time = datetime.utcnow()
+                else:
+                    logger.error(f"Failed to send telemetry: {ack.message}")
+                    # Keep batch for retry
+            else:
+                logger.warning("Not connected to InfraMind, keeping batch for retry")
+                # Try to reconnect
+                try:
+                    await self.grpc_client.connect()
+                except Exception as e:
+                    logger.debug(f"Reconnection failed: {e}")
 
         except Exception as e:
             logger.error(f"Error sending telemetry batch: {e}", exc_info=True)
             # Keep batch for retry
-            pass
 
     async def _receive_action_plans(self) -> None:
         """
         Receive action plans from InfraMind via gRPC streaming.
 
-        This is a placeholder for Phase 2 when InfraMind integration is complete.
+        Action plans are streamed from InfraMind and forwarded to Control API.
         """
         logger.info("Starting action plan receiver...")
 
         try:
-            # TODO: Implement gRPC streaming call to InfraMind DecisionAPI
-            # For now, this is a placeholder
-            while self._running:
-                await asyncio.sleep(10)
-                # Will implement in Phase 2
-                pass
+            cluster_id = self.settings.service_name
+
+            async for action_plan in self.grpc_client.stream_action_plans(cluster_id):
+                if not self._running:
+                    break
+
+                logger.info(
+                    f"Received action plan {action_plan.plan_id} "
+                    f"with {len(action_plan.decisions)} decisions"
+                )
+
+                try:
+                    # Forward plan to Control API
+                    await self._forward_action_plan(action_plan)
+
+                    # Acknowledge successful processing
+                    await self.grpc_client.acknowledge_plan(
+                        plan_id=action_plan.plan_id,
+                        success=True,
+                        message="Plan forwarded to Control API",
+                    )
+
+                except Exception as e:
+                    logger.error(f"Error processing action plan: {e}", exc_info=True)
+
+                    # Acknowledge failure
+                    await self.grpc_client.acknowledge_plan(
+                        plan_id=action_plan.plan_id,
+                        success=False,
+                        message=str(e),
+                    )
 
         except asyncio.CancelledError:
             logger.info("Action plan receiver cancelled")
         except Exception as e:
             logger.error(f"Error receiving action plans: {e}", exc_info=True)
 
-    async def forward_action_plan_to_control_api(
-        self, action_plan: dict[str, Any]
-    ) -> None:
+    async def _forward_action_plan(self, action_plan: Any) -> None:
         """
         Forward an action plan from InfraMind to Control API.
 
         Args:
-            action_plan: Action plan from InfraMind
+            action_plan: ActionPlan proto message from InfraMind
         """
-        logger.info(f"Forwarding action plan to Control API")
+        logger.info(f"Forwarding action plan {action_plan.plan_id} to Control API")
+
+        # Convert proto to dict for HTTP API
+        plan_dict = {
+            "plan_id": action_plan.plan_id,
+            "source": action_plan.source or "inframind",
+            "decisions": [
+                {
+                    "verb": d.verb,
+                    "target": dict(d.target),
+                    "params": dict(d.params),
+                    "ttl": d.ttl,
+                    "safety": {
+                        "rate_limit": d.safety.rate_limit,
+                        "window": d.safety.window,
+                    }
+                    if d.safety
+                    else None,
+                }
+                for d in action_plan.decisions
+            ],
+            "created_at": action_plan.created_at,
+            "correlation_id": action_plan.correlation_id,
+        }
 
         try:
             response = await self.http_client.post(
                 "/action-plans",
-                json=action_plan,
+                json=plan_dict,
                 headers={"Authorization": f"Bearer {self.settings.control_api_token}"}
                 if self.settings.control_api_token
                 else {},
             )
 
             response.raise_for_status()
-            logger.info(f"✓ Action plan forwarded successfully: {response.json()}")
+            logger.info(f"✓ Action plan {action_plan.plan_id} forwarded successfully")
 
         except httpx.HTTPError as e:
             logger.error(f"Error forwarding action plan: {e}", exc_info=True)

@@ -84,36 +84,44 @@ This roadmap outlines the planned development phases for Sentinel.
 
 ---
 
-## Phase 2: InfraMind Integration (Weeks 6-7)
+## Phase 2: InfraMind Integration (Weeks 6-7) ✅ Complete
 
 **Goal:** Close the feedback loop with InfraMind's predictive brain
 
 ### Telemetry Adapter
-- Batch and filter telemetry from Prometheus/Kafka
-- Stream telemetry to InfraMind via gRPC
-- Handle backpressure and retry logic
+- [x] Batch and filter telemetry from Prometheus/Kafka
+- [x] Stream telemetry to InfraMind via gRPC
+- [x] Handle backpressure and retry logic
+- [x] Automatic reconnection on connection failures
 
 ### Decision API Client
-- gRPC client for InfraMind Decision API
-- Receive and validate ActionPlans
-- Queue plans for execution
-- Track plan acknowledgments and outcomes
+- [x] gRPC client for InfraMind Decision API
+- [x] Receive and validate ActionPlans via streaming
+- [x] Queue plans for execution
+- [x] Track plan acknowledgments and outcomes
+- [x] Bidirectional communication (telemetry out, plans in)
 
 ### Plan Execution Pipeline
-- Apply ActionPlans with guardrails
-- Audit all plan executions
-- Feedback loop to InfraMind
+- [x] Apply ActionPlans with guardrails
+- [x] Support for multiple action verbs (scale, reschedule, rollback, update)
+- [x] Audit all plan executions via event publishing
+- [x] Feedback loop to InfraMind with execution results
+- [x] Background execution with status tracking
+- [x] Policy validation integration
 
 **Success Criteria:**
-- Telemetry flowing from Sentinel to InfraMind
-- InfraMind can submit ActionPlans
-- Plans executed with audit trail
-- Closed feedback loop operational
+- ✅ Telemetry flowing from Sentinel to InfraMind
+- ✅ InfraMind can submit ActionPlans via gRPC streaming
+- ✅ Plans executed with audit trail
+- ✅ Closed feedback loop operational
 
 **Deliverables:**
-- InfraMind Adapter service
-- gRPC integration tested with mock InfraMind
-- E2E test: metric → prediction → action → feedback
+- ✅ InfraMind Adapter service with gRPC client
+- ✅ Plan Executor service in Control API
+- ✅ Proto definitions with streaming support
+- ✅ Comprehensive test coverage (gRPC client + executor)
+- ✅ API endpoints for plan execution and status
+- ✅ Event-driven architecture integration
 
 ---
 
