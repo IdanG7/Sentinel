@@ -110,9 +110,9 @@ class TestInfraMindClient:
 
         # Should raise error when trying to stream
         with pytest.raises(RuntimeError, match="Not connected"):
-            # Create the async generator and try to iterate
-            stream = client.stream_action_plans("test-cluster")
-            await stream.__anext__()
+            # Try to iterate over the async generator
+            async for _ in client.stream_action_plans("test-cluster"):
+                break  # Should not reach here
 
     @pytest.mark.asyncio
     async def test_acknowledge_plan(self, client):
