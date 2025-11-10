@@ -1,0 +1,78 @@
+# Sentinel Agent Configuration
+
+image:
+  registry: ghcr.io
+  repository: sentinel/sentinel-agent
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# DaemonSet update strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+# Agent configuration
+config:
+  metricsPort: 9100
+  controlApi: http://sentinel-control-api:8000
+  logLevel: info
+  logFormat: json
+  gpu:
+    enabled: true
+
+# Resource limits
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9100"
+  prometheus.io/path: "/metrics"
+
+# Security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations - allow on all nodes including masters
+tolerations:
+  - operator: Exists
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC
+rbac:
+  create: true
+
+# Host path mounts (for system metrics)
+hostPaths:
+  enabled: true
+  procPath: /proc
+  sysPath: /sys
+
+# NVIDIA GPU support
+nvidia:
+  enabled: true
+  # Mount NVIDIA device plugin socket
+  devicePluginPath: /var/lib/kubelet/device-plugins

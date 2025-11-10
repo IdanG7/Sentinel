@@ -1,0 +1,19 @@
+apiVersion: v2
+name: sentinel-core
+description: Sentinel Core Services - Control API, Pipeline Controller, InfraMind Adapter
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - sentinel
+  - kubernetes
+  - ai
+  - infrastructure
+  - automation
+home: https://github.com/<org>/sentinel
+sources:
+  - https://github.com/<org>/sentinel
+maintainers:
+  - name: Sentinel Team
+    email: dev@sentinel.ai
+dependencies: []

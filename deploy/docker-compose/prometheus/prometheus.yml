@@ -1,0 +1,91 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'sentinel-local'
+    environment: 'dev'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - '/etc/prometheus/alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Sentinel Control API
+  - job_name: 'sentinel-control-api'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+        labels:
+          service: 'control-api'
+          component: 'api'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Sentinel Pipeline Controller
+  - job_name: 'sentinel-pipeline-controller'
+    static_configs:
+      - targets: ['host.docker.internal:8001']
+        labels:
+          service: 'pipeline-controller'
+          component: 'controller'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Sentinel InfraMind Adapter
+  - job_name: 'sentinel-infra-adapter'
+    static_configs:
+      - targets: ['host.docker.internal:8002']
+        labels:
+          service: 'infra-adapter'
+          component: 'adapter'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Sentinel Node Agents
+  - job_name: 'sentinel-agents'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+        labels:
+          service: 'node-agent'
+          component: 'agent'
+          node: 'local-dev'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Kafka Exporter (if running)
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9092']
+        labels:
+          service: 'kafka'
+    scrape_interval: 30s
+
+  # PostgreSQL Exporter (if added later)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: []  # Add postgres-exporter if needed
+        labels:
+          service: 'postgres'
+    scrape_interval: 30s
+
+# Remote write configuration (for InfraMind integration - optional)
+# remote_write:
+#   - url: http://inframind:9091/api/v1/write
+#     queue_config:
+#       capacity: 10000
+#       max_shards: 5
+#       min_shards: 1

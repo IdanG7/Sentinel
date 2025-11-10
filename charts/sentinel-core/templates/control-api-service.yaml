@@ -1,0 +1,23 @@
+{{- if .Values.controlApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sentinel-core.fullname" . }}-control-api
+  labels:
+    {{- include "sentinel-core.labels" . | nindent 4 }}
+    app.kubernetes.io/component: control-api
+  {{- with .Values.controlApi.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.controlApi.service.type }}
+  ports:
+    - port: {{ .Values.controlApi.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "sentinel-core.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: control-api
+{{- end }}

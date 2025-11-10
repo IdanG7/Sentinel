@@ -1,0 +1,34 @@
+# Sentinel Node Agent Configuration Example
+
+# Node identifier (unique per node)
+node_id: node-local-01
+
+# Port for Prometheus metrics endpoint
+metrics_port: 9100
+
+# Control API endpoint
+control_api: http://localhost:8000
+
+# TLS configuration for secure communication
+tls:
+  enabled: false
+  cert: /etc/sentinel/tls/agent.crt
+  key: /etc/sentinel/tls/agent.key
+  ca: /etc/sentinel/tls/ca.crt
+
+# Enabled collectors
+collectors:
+  - cpu
+  - memory
+  - disk
+  - network
+  - gpu
+
+# Logging configuration
+log:
+  level: info  # debug, info, warn, error
+  format: json  # json or text
+
+# GPU monitoring (requires NVIDIA drivers and NVML)
+gpu:
+  enabled: true

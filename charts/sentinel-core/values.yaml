@@ -1,0 +1,183 @@
+# Sentinel Core Services Configuration
+
+# Global configuration
+global:
+  imageRegistry: ghcr.io
+  imagePullPolicy: IfNotPresent
+  storageClass: ""
+
+# Control API configuration
+controlApi:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: sentinel/sentinel-control-api
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8000
+    annotations: {}
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: sentinel-api.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+  env:
+    - name: DATABASE_URL
+      value: postgresql://sentinel:sentinel@postgres:5432/sentinel
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: kafka:9092
+    - name: VAULT_ADDRESS
+      value: http://vault:8200
+    - name: LOG_LEVEL
+      value: info
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+
+# Pipeline Controller configuration
+pipelineController:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: sentinel/sentinel-pipeline-controller
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8001
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: kafka:9092
+    - name: VAULT_ADDRESS
+      value: http://vault:8200
+    - name: LOG_LEVEL
+      value: info
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8001"
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+# InfraMind Adapter configuration
+infraAdapter:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: sentinel/sentinel-infra-adapter
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 50051  # gRPC port
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  env:
+    - name: KAFKA_BOOTSTRAP_SERVERS
+      value: kafka:9092
+    - name: PROMETHEUS_URL
+      value: http://prometheus:9090
+    - name: INFRAMIND_GRPC_ENDPOINT
+      value: inframind:50051
+    - name: LOG_LEVEL
+      value: info
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8002"
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC
+rbac:
+  create: true
+
+# Node selector for all pods
+nodeSelector: {}
+
+# Tolerations for all pods
+tolerations: []
+
+# Affinity for all pods
+affinity: {}

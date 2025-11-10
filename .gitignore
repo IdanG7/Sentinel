@@ -1,0 +1,133 @@
+# Sentinel - Root .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+vendor/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Kubernetes
+*.kubeconfig
+kubeconfig.yaml
+*.key
+*.crt
+*.pem
+
+# Secrets and config
+.env
+.env.*
+!.env.example
+secrets/
+*.secret
+*.token
+vault-keys.json
+
+# Helm
+charts/**/charts/
+charts/**/*.lock
+
+# Docker
+.dockerignore
+
+# Terraform / IaC
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# CI/CD
+*.log
+.jenkins/
+
+# Observability / Local dev
+prometheus-data/
+grafana-data/
+kafka-data/
+mlflow-data/
+
+# Build artifacts
+bin/
+target/
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# SBOMs and signatures (build-time generated)
+*.sbom.json
+*.sig
+*.att
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+#Claude
+*.claude

@@ -1,0 +1,68 @@
+{{- if .Values.controlApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sentinel-core.fullname" . }}-control-api
+  labels:
+    {{- include "sentinel-core.labels" . | nindent 4 }}
+    app.kubernetes.io/component: control-api
+spec:
+  {{- if not .Values.controlApi.autoscaling.enabled }}
+  replicas: {{ .Values.controlApi.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "sentinel-core.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: control-api
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.controlApi.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "sentinel-core.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: control-api
+    spec:
+      serviceAccountName: {{ include "sentinel-core.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.controlApi.podSecurityContext | nindent 8 }}
+      containers:
+        - name: control-api
+          securityContext:
+            {{- toYaml .Values.controlApi.securityContext | nindent 12 }}
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.controlApi.image.repository }}:{{ .Values.controlApi.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.controlApi.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            {{- toYaml .Values.controlApi.env | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.controlApi.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: sentinel-agent
+description: Sentinel Node Agent - Metrics collector and action executor
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - sentinel
+  - kubernetes
+  - monitoring
+  - metrics
+  - gpu
+home: https://github.com/<org>/sentinel
+sources:
+  - https://github.com/<org>/sentinel
+maintainers:
+  - name: Sentinel Team
+    email: dev@sentinel.ai

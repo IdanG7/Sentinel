@@ -1,0 +1,133 @@
+version: 2
+
+updates:
+  # Python dependencies - Control API
+  - package-ecosystem: "pip"
+    directory: "/services/control-api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+      - "control-api"
+
+  # Python dependencies - Pipeline Controller
+  - package-ecosystem: "pip"
+    directory: "/services/pipeline-controller"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+      - "pipeline-controller"
+
+  # Python dependencies - InfraMind Adapter
+  - package-ecosystem: "pip"
+    directory: "/services/infra-adapter"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+      - "infra-adapter"
+
+  # Go dependencies - Agent
+  - package-ecosystem: "gomod"
+    directory: "/services/agent"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
+      - "agent"
+
+  # Python dependencies - Policy Engine
+  - package-ecosystem: "pip"
+    directory: "/libs/policy-engine"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "python"
+      - "libs"
+
+  # Python dependencies - K8s Driver
+  - package-ecosystem: "pip"
+    directory: "/libs/k8s-driver"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "python"
+      - "libs"
+
+  # Python dependencies - Sentinel Common
+  - package-ecosystem: "pip"
+    directory: "/libs/sentinel-common"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "python"
+      - "libs"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/services/control-api"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/pipeline-controller"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/infra-adapter"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/services/agent"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    labels:
+      - "dependencies"
+      - "github-actions"

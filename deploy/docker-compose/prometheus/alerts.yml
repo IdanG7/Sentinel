@@ -1,0 +1,135 @@
+groups:
+  - name: sentinel_api
+    interval: 30s
+    rules:
+      - alert: SentinelAPIDown
+        expr: up{job="sentinel-control-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: control-api
+        annotations:
+          summary: "Sentinel Control API is down"
+          description: "Control API has been down for more than 1 minute."
+
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: control-api
+        annotations:
+          summary: "High API request latency"
+          description: "95th percentile latency is above 1 second for 5 minutes."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: control-api
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate is above 5% for 5 minutes."
+
+  - name: sentinel_controller
+    interval: 30s
+    rules:
+      - alert: ControllerDown
+        expr: up{job="sentinel-pipeline-controller"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: pipeline-controller
+        annotations:
+          summary: "Pipeline Controller is down"
+          description: "Pipeline Controller has been down for more than 1 minute."
+
+      - alert: HighReconciliationFailures
+        expr: rate(sentinel_controller_reconciliations_total{result="failure"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: pipeline-controller
+        annotations:
+          summary: "High reconciliation failure rate"
+          description: "Reconciliation failures are above 10% for 5 minutes."
+
+      - alert: ReconciliationQueueBacklog
+        expr: sentinel_controller_reconciliation_queue_depth > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: pipeline-controller
+        annotations:
+          summary: "Large reconciliation queue backlog"
+          description: "Reconciliation queue has more than 100 pending items."
+
+  - name: sentinel_policy
+    interval: 30s
+    rules:
+      - alert: HighPolicyViolations
+        expr: rate(sentinel_policy_violations_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: policy-engine
+        annotations:
+          summary: "High policy violation rate"
+          description: "Policy violations are occurring at a high rate."
+
+  - name: sentinel_workloads
+    interval: 30s
+    rules:
+      - alert: WorkloadInferenceLatencyHigh
+        expr: histogram_quantile(0.95, rate(workload_inference_latency_ms_bucket[5m])) > 500
+        for: 5m
+        labels:
+          severity: warning
+          component: workload
+        annotations:
+          summary: "High workload inference latency"
+          description: "95th percentile inference latency is above 500ms."
+
+      - alert: GPUUtilizationLow
+        expr: avg(gpu_utilization_percent) < 20
+        for: 30m
+        labels:
+          severity: info
+          component: gpu
+        annotations:
+          summary: "Low GPU utilization"
+          description: "Average GPU utilization is below 20% for 30 minutes."
+
+      - alert: GPUTemperatureHigh
+        expr: gpu_temperature_celsius > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: gpu
+        annotations:
+          summary: "High GPU temperature"
+          description: "GPU temperature is above 85°C for 5 minutes."
+
+  - name: sentinel_infrastructure
+    interval: 30s
+    rules:
+      - alert: KafkaDown
+        expr: up{job="kafka"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: kafka
+        annotations:
+          summary: "Kafka is down"
+          description: "Kafka broker has been down for more than 2 minutes."
+
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: postgres
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 2 minutes."

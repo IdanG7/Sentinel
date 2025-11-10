@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package sentinel.v1;
+
+option go_package = "github.com/sentinel/proto/v1;sentinelv1";
+
+// DecisionService - gRPC interface between Sentinel and InfraMind
+service DecisionService {
+  // Submit telemetry data to InfraMind
+  rpc SubmitTelemetry(stream TelemetryBatch) returns (Ack);
+
+  // Get action plan based on telemetry
+  rpc GetActionPlan(TelemetryRef) returns (ActionPlan);
+
+  // Acknowledge plan execution
+  rpc AckPlan(PlanAck) returns (Ack);
+}
+
+// TelemetryPoint represents a single metric observation
+message TelemetryPoint {
+  string name = 1;           // Metric name (e.g., "gpu_utilization_percent")
+  double value = 2;          // Metric value
+  map<string, string> labels = 3; // Labels (node, gpu, workload, etc.)
+  int64 ts = 4;              // Timestamp (Unix milliseconds)
+}
+
+// TelemetryBatch contains multiple telemetry points
+message TelemetryBatch {
+  repeated TelemetryPoint points = 1;
+  string cluster_id = 2;     // Source cluster identifier
+  string batch_id = 3;       // Unique batch identifier
+}
+
+// TelemetryRef references a telemetry batch
+message TelemetryRef {
+  string batch_id = 1;
+  string cluster_id = 2;
+}
+
+// Safety constraints for action execution
+message Safety {
+  int32 rate_limit = 1;      // Max actions per window
+  string window = 2;         // Time window (e.g., "5m", "1h")
+}
+
+// Decision represents a single action to be taken
+message Decision {
+  string verb = 1;           // Action verb (scale, reschedule, rollback, etc.)
+  map<string, string> target = 2; // Target resource identifiers
+  map<string, string> params = 3; // Action parameters
+  int32 ttl = 4;             // Time-to-live in seconds
+  Safety safety = 5;         // Safety constraints
+}
+
+// ActionPlan contains multiple decisions
+message ActionPlan {
+  string plan_id = 1;        // Unique plan identifier
+  repeated Decision decisions = 2;
+  string source = 3;         // Source of plan (InfraMind, user, policy)
+  int64 created_at = 4;      // Plan creation timestamp
+  string correlation_id = 5; // Correlation ID for tracing
+}
+
+// PlanAck acknowledges plan execution
+message PlanAck {
+  string plan_id = 1;
+  bool success = 2;
+  string message = 3;        // Execution result or error message
+  int64 executed_at = 4;     // Execution timestamp
+  map<string, string> metrics = 5; // Execution metrics
+}
+
+// Ack is a generic acknowledgment
+message Ack {
+  bool success = 1;
+  string message = 2;
+}
