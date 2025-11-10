@@ -1,0 +1,204 @@
+{
+  "dashboard": {
+    "title": "Sentinel Workload Health",
+    "tags": ["sentinel", "workloads", "health"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Inference Latency Percentiles",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(sentinel_workload_inference_latency_ms_bucket[5m])) by (workload, le))",
+            "legendFormat": "{{workload}} p99"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(sentinel_workload_inference_latency_ms_bucket[5m])) by (workload, le))",
+            "legendFormat": "{{workload}} p95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(sentinel_workload_inference_latency_ms_bucket[5m])) by (workload, le))",
+            "legendFormat": "{{workload}} p50"
+          }
+        ],
+        "yaxes": [
+          {"format": "ms", "label": "Latency"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [500], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "name": "High p99 Latency"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Success Rate",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(sentinel_workload_requests_total{status=\"success\"}[5m])) by (workload) / sum(rate(sentinel_workload_requests_total[5m])) by (workload) * 100",
+            "legendFormat": "{{workload}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "Success Rate %", "min": 0, "max": 100},
+          {"format": "short"}
+        ],
+        "thresholds": [
+          {"value": 99.5, "colorMode": "critical", "op": "lt", "fill": true, "line": true}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Request Queue Depth",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sentinel_workload_queue_depth",
+            "legendFormat": "{{workload}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Queue Depth"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Throughput (req/s)",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(sentinel_workload_requests_total[5m])) by (workload)",
+            "legendFormat": "{{workload}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Workloads",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 16, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "count(kube_deployment_status_replicas_available{app=\"sentinel\"} > 0)",
+            "legendFormat": "Active Workloads"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Avg Batch Size",
+        "type": "stat",
+        "gridPos": {"x": 6, "y": 16, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "avg(sentinel_workload_batch_size) by (workload)",
+            "legendFormat": "{{workload}}"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Error Rate by Type",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(sentinel_workload_errors_total[5m])) by (workload, error_type)",
+            "legendFormat": "{{workload}} - {{error_type}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Errors/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Resource Utilization",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\".*sentinel.*\"}[5m])) by (pod)",
+            "legendFormat": "{{pod}} CPU"
+          }
+        ],
+        "yaxes": [
+          {"format": "percentunit", "label": "CPU Cores"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Memory Usage",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(container_memory_working_set_bytes{pod=~\".*sentinel.*\"}) by (pod)",
+            "legendFormat": "{{pod}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "bytes", "label": "Memory"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Pod Restart Count",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 32, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(kube_pod_container_status_restarts_total{pod=~\".*sentinel.*\"}) by (pod)",
+            "legendFormat": "{{pod}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Restarts"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Model Loading Time",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 32, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "avg(sentinel_workload_model_load_duration_seconds) by (workload)",
+            "legendFormat": "{{workload}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      }
+    ]
+  }
+}

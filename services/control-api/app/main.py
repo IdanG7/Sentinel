@@ -37,10 +37,23 @@ async def lifespan(app: FastAPI):
     print(f"   Database: {settings.database_url_str.split('@')[1] if '@' in settings.database_url_str else 'configured'}")
     print(f"   Kafka: {settings.kafka_bootstrap_servers}")
 
+    # Initialize database
+    from app.core.database import init_db
+    await init_db()
+    print("   ✓ Database initialized")
+
+    # Initialize event publisher
+    from app.core.events import init_event_publisher
+    await init_event_publisher(settings)
+    print("   ✓ Event publisher initialized")
+
     yield
 
     # Shutdown
     print("🛑 Shutting down Sentinel Control API...")
+    from app.core.events import shutdown_event_publisher
+    await shutdown_event_publisher()
+    print("   ✓ Event publisher stopped")
 
 
 app = FastAPI(

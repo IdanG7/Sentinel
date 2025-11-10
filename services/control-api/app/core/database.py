@@ -57,3 +57,15 @@ async def get_db_context():
         except Exception:
             await session.rollback()
             raise
+
+
+async def init_db() -> None:
+    """Initialize database tables."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+async def drop_db() -> None:
+    """Drop all database tables (for testing)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)

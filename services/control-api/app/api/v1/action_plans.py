@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.events import get_event_publisher
 from app.core.security import get_current_user
 from app.models.schemas import (
     ActionPlanCreate,
@@ -37,15 +38,30 @@ async def create_action_plan(
         "decisions": [decision.model_dump() for decision in action_plan.decisions],
         "source": action_plan.source.value,
         "correlation_id": action_plan.correlation_id,
-        "status": ActionPlanStatus.PENDING.value,
+        "status": ActionPlanStatus.VALIDATING.value,
         "created_at": now,
         "executed_at": None,
     }
 
     action_plans_db[plan_id] = plan_data
 
-    # TODO: Send plan to Policy Engine for validation
-    # TODO: If approved, send to Pipeline Controller for execution
+    # Publish events to Kafka for Policy Engine validation
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_action_plan_event(
+        plan_id=plan_id,
+        event_type="action_plan.created",
+        data=plan_data,
+    )
+    await event_publisher.publish_audit_event(
+        actor=current_user,
+        verb="submit",
+        target={"type": "action_plan", "id": str(plan_id)},
+        result="success",
+        metadata={
+            "source": action_plan.source.value,
+            "decisions_count": len(action_plan.decisions),
+        },
+    )
 
     return ActionPlanResponse(**plan_data)
 

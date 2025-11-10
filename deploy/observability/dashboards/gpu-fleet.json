@@ -1,0 +1,195 @@
+{
+  "dashboard": {
+    "title": "Sentinel GPU Fleet",
+    "tags": ["sentinel", "gpu", "nvidia"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "GPU Utilization by Node",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sentinel_node_gpu_utilization_percent",
+            "legendFormat": "{{node}} GPU {{gpu_index}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "GPU Utilization %", "min": 0, "max": 100},
+          {"format": "short"}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [80], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "name": "High GPU Utilization"
+        }
+      },
+      {
+        "id": 2,
+        "title": "GPU Memory Usage",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sentinel_node_gpu_memory_used_bytes / sentinel_node_gpu_memory_total_bytes * 100",
+            "legendFormat": "{{node}} GPU {{gpu_index}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "Memory Usage %", "min": 0, "max": 100},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "title": "GPU Temperature",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sentinel_node_gpu_temperature_celsius",
+            "legendFormat": "{{node}} GPU {{gpu_index}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "celsius", "label": "Temperature"},
+          {"format": "short"}
+        ],
+        "thresholds": [
+          {"value": 85, "colorMode": "critical", "op": "gt", "fill": true, "line": true}
+        ]
+      },
+      {
+        "id": 4,
+        "title": "GPU Power Draw",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sentinel_node_gpu_power_draw_watts",
+            "legendFormat": "{{node}} GPU {{gpu_index}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "watt", "label": "Power (W)"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "GPU Throttle Events",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 16, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(increase(sentinel_node_gpu_throttle_events_total[1h]))",
+            "legendFormat": "Throttle Events"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "PCIe Bandwidth Saturation",
+        "type": "graph",
+        "gridPos": {"x": 6, "y": 16, "w": 18, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(sentinel_node_gpu_pcie_tx_bytes[5m]) + rate(sentinel_node_gpu_pcie_rx_bytes[5m])",
+            "legendFormat": "{{node}} GPU {{gpu_index}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "Bps", "label": "PCIe Bandwidth"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "GPU SM Occupancy",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sentinel_node_gpu_sm_occupancy_percent",
+            "legendFormat": "{{node}} GPU {{gpu_index}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "SM Occupancy %", "min": 0, "max": 100},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "GPU ECC Errors",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "increase(sentinel_node_gpu_ecc_errors_total[1h])",
+            "legendFormat": "{{node}} GPU {{gpu_index}} {{error_type}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "ECC Errors"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [1], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "1h", "now"]},
+              "reducer": {"params": [], "type": "sum"},
+              "type": "query"
+            }
+          ],
+          "name": "GPU ECC Errors Detected"
+        }
+      },
+      {
+        "id": 9,
+        "title": "GPU Allocation Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 32, "w": 24, "h": 4},
+        "targets": [
+          {
+            "expr": "count(sentinel_node_gpu_utilization_percent > 10)",
+            "legendFormat": "GPUs In Use"
+          },
+          {
+            "expr": "count(sentinel_node_gpu_utilization_percent <= 10)",
+            "legendFormat": "GPUs Idle"
+          },
+          {
+            "expr": "count(sentinel_node_gpu_utilization_percent)",
+            "legendFormat": "Total GPUs"
+          }
+        ]
+      }
+    ]
+  }
+}

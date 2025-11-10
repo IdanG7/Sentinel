@@ -1,11 +1,15 @@
 """Deployment management endpoints."""
 
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_session
+from app.core.events import get_event_publisher
 from app.core.security import get_current_user
+from app.crud import deployment as deployment_crud
 from app.models.schemas import (
     DeploymentCreate,
     DeploymentResponse,
@@ -15,13 +19,11 @@ from app.models.schemas import (
 
 router = APIRouter(prefix="/deployments", tags=["deployments"])
 
-# In-memory storage (replace with database)
-deployments_db: dict[UUID, dict] = {}
-
 
 @router.post("", response_model=DeploymentResponse, status_code=status.HTTP_201_CREATED)
 async def create_deployment(
     deployment: DeploymentCreate,
+    db: AsyncSession = Depends(get_session),
     current_user: str = Depends(get_current_user),
 ) -> DeploymentResponse:
     """
@@ -30,26 +32,48 @@ async def create_deployment(
     This initiates the deployment process. The actual deployment
     is handled asynchronously by the Pipeline Controller.
     """
-    deployment_id = uuid4()
-    now = datetime.utcnow()
+    # Create deployment in database
+    db_deployment = await deployment_crud.create(db, obj_in=deployment)
 
+    # Prepare deployment data for events
     deployment_data = {
-        "id": deployment_id,
-        "workload_id": deployment.workload_id,
-        "cluster_id": deployment.cluster_id,
-        "strategy": deployment.strategy.value,
-        "replicas": deployment.replicas,
-        "canary_config": deployment.canary_config.model_dump() if deployment.canary_config else None,
-        "status": DeploymentStatus.PENDING.value,
-        "created_at": now,
-        "updated_at": now,
+        "id": db_deployment.id,
+        "workload_id": db_deployment.workload_id,
+        "cluster_id": db_deployment.cluster_id,
+        "strategy": db_deployment.strategy,
+        "replicas": db_deployment.replicas,
+        "canary_config": db_deployment.canary_config,
+        "status": db_deployment.status,
+        "created_at": db_deployment.created_at,
+        "updated_at": db_deployment.updated_at,
     }
 
-    deployments_db[deployment_id] = deployment_data
+    # Publish events to Kafka
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_deployment_event(
+        deployment_id=db_deployment.id,
+        event_type="deployment.created",
+        data=deployment_data,
+    )
+    await event_publisher.publish_audit_event(
+        actor=current_user,
+        verb="create",
+        target={"type": "deployment", "id": str(db_deployment.id)},
+        result="success",
+        metadata={"workload_id": str(deployment.workload_id), "cluster_id": str(deployment.cluster_id)},
+    )
 
-    # TODO: Send event to Kafka for Pipeline Controller
-
-    return DeploymentResponse(**deployment_data)
+    return DeploymentResponse(
+        id=db_deployment.id,
+        workload_id=db_deployment.workload_id,
+        cluster_id=db_deployment.cluster_id,
+        strategy=db_deployment.strategy,
+        replicas=db_deployment.replicas,
+        canary_config=db_deployment.canary_config,
+        status=db_deployment.status,
+        created_at=db_deployment.created_at,
+        updated_at=db_deployment.updated_at,
+    )
 
 
 @router.get("", response_model=list[DeploymentResponse])
@@ -90,10 +114,29 @@ async def scale_deployment(
     if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
 
+    old_replicas = deployment["replicas"]
     deployment["replicas"] = scale_request.replicas
+    deployment["status"] = DeploymentStatus.DEPLOYING.value
     deployment["updated_at"] = datetime.utcnow()
 
-    # TODO: Send scale event to Kafka for Pipeline Controller
+    # Publish events to Kafka
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_deployment_event(
+        deployment_id=deployment_id,
+        event_type="deployment.scaled",
+        data={
+            "deployment_id": deployment_id,
+            "old_replicas": old_replicas,
+            "new_replicas": scale_request.replicas,
+        },
+    )
+    await event_publisher.publish_audit_event(
+        actor=current_user,
+        verb="scale",
+        target={"type": "deployment", "id": str(deployment_id)},
+        result="success",
+        metadata={"old_replicas": old_replicas, "new_replicas": scale_request.replicas},
+    )
 
     return DeploymentResponse(**deployment)
 
@@ -113,7 +156,19 @@ async def rollback_deployment(
     deployment["status"] = DeploymentStatus.ROLLED_BACK.value
     deployment["updated_at"] = datetime.utcnow()
 
-    # TODO: Send rollback event to Kafka for Pipeline Controller
+    # Publish events to Kafka
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_deployment_event(
+        deployment_id=deployment_id,
+        event_type="deployment.rollback",
+        data={"deployment_id": deployment_id},
+    )
+    await event_publisher.publish_audit_event(
+        actor=current_user,
+        verb="rollback",
+        target={"type": "deployment", "id": str(deployment_id)},
+        result="success",
+    )
 
     return DeploymentResponse(**deployment)
 
@@ -129,6 +184,18 @@ async def delete_deployment(
     if deployment_id not in deployments_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
 
-    # TODO: Send delete event to Kafka to cleanup cluster resources
+    # Publish events to Kafka to cleanup cluster resources
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_deployment_event(
+        deployment_id=deployment_id,
+        event_type="deployment.deleted",
+        data={"deployment_id": deployment_id},
+    )
+    await event_publisher.publish_audit_event(
+        actor=current_user,
+        verb="delete",
+        target={"type": "deployment", "id": str(deployment_id)},
+        result="success",
+    )
 
     del deployments_db[deployment_id]
