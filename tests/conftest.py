@@ -1,5 +1,8 @@
 """Pytest configuration for integration tests."""
 
+import sys
+from pathlib import Path
+
 import pytest
 import asyncio
 from typing import AsyncGenerator
@@ -7,7 +10,10 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from services.control_api.app.core.database import Base
+# Add services to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "services" / "control-api"))
+
+from app.core.database import Base
 
 
 @pytest.fixture(scope="session")
