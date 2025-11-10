@@ -54,7 +54,13 @@ class TestInfraMindClient:
         client = InfraMindClient(settings)
 
         with patch("grpc.aio.secure_channel") as mock_channel:
-            with patch("builtins.open", MagicMock()):
+            # Mock file open to return bytes for certificate
+            mock_file = MagicMock()
+            mock_file.read.return_value = b"fake-cert-data"
+            mock_file.__enter__.return_value = mock_file
+            mock_file.__exit__.return_value = None
+
+            with patch("builtins.open", return_value=mock_file):
                 mock_channel.return_value.channel_ready = AsyncMock()
 
                 await client.connect()
@@ -98,18 +104,15 @@ class TestInfraMindClient:
         assert "Empty batch" in ack.message
 
     @pytest.mark.asyncio
-    async def test_send_batch_not_connected(self, client):
-        """Test sending batch when not connected."""
+    async def test_stream_not_connected(self, client):
+        """Test streaming when not connected raises error."""
         client.connected = False
 
-        telemetry_data = [
-            {"metric_name": "test", "value": 1.0, "labels": {}, "timestamp": datetime.utcnow().isoformat()}
-        ]
-
-        # Should raise error
+        # Should raise error when trying to stream
         with pytest.raises(RuntimeError, match="Not connected"):
-            async for _ in client.stream_action_plans("test-cluster"):
-                pass
+            # Create the async generator and try to iterate
+            stream = client.stream_action_plans("test-cluster")
+            await stream.__anext__()
 
     @pytest.mark.asyncio
     async def test_acknowledge_plan(self, client):
