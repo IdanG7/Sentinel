@@ -114,7 +114,9 @@ async def get_deployment(
     """
     deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found"
+        )
 
     return DeploymentResponse(
         id=deployment.id,
@@ -141,7 +143,9 @@ async def scale_deployment(
     """
     deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found"
+        )
 
     old_replicas = deployment.replicas
 
@@ -149,7 +153,10 @@ async def scale_deployment(
     updated_deployment = await deployment_crud.update(
         db,
         db_obj=deployment,
-        obj_in={"replicas": scale_request.replicas, "status": DeploymentStatus.DEPLOYING.value},
+        obj_in={
+            "replicas": scale_request.replicas,
+            "status": DeploymentStatus.DEPLOYING.value,
+        },
     )
 
     # Publish events to Kafka
@@ -195,7 +202,9 @@ async def rollback_deployment(
     """
     deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found"
+        )
 
     # Update deployment status to rolled back
     updated_deployment = await deployment_crud.update(
@@ -242,7 +251,9 @@ async def delete_deployment(
     """
     deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found"
+        )
 
     # Publish events to Kafka to cleanup cluster resources
     event_publisher = get_event_publisher()

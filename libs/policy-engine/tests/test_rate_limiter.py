@@ -47,9 +47,7 @@ class TestRateLimiter:
 
         # Make requests up to limit
         for i in range(max_ops):
-            allowed, metadata = limiter.check_rate_limit(
-                resource_key, max_ops, window
-            )
+            allowed, metadata = limiter.check_rate_limit(resource_key, max_ops, window)
             assert allowed is True
             assert metadata["current_count"] == i
             assert metadata["remaining"] == max_ops - (i + 1)

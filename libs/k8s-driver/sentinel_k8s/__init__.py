@@ -1,6 +1,11 @@
 """Sentinel Kubernetes Driver - Multi-cluster K8s resource management."""
 
-from .canary import CanaryConfig, CanaryDeployment, CanaryDeploymentController, CanaryPhase
+from .canary import (
+    CanaryConfig,
+    CanaryDeployment,
+    CanaryDeploymentController,
+    CanaryPhase,
+)
 from .cluster import ClusterConnection, ClusterManager
 from .deployments import DeploymentManager
 from .health import DeploymentHealthChecker, HealthCheckResult, HealthStatus

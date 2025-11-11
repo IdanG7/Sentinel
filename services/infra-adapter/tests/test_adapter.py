@@ -119,7 +119,9 @@ class TestInfraMindAdapter:
         assert point.value == 75.0
 
         # Test TelemetryBatch
-        batch = TelemetryBatch(points=[point], cluster_id="test-cluster", batch_id="batch-123")
+        batch = TelemetryBatch(
+            points=[point], cluster_id="test-cluster", batch_id="batch-123"
+        )
         assert len(batch.points) == 1
         assert batch.cluster_id == "test-cluster"
 

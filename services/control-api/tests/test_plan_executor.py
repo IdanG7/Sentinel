@@ -32,7 +32,9 @@ class TestPlanExecutor:
     @pytest.fixture
     def executor(self, mock_event_publisher, mock_k8s_driver):
         """Create plan executor."""
-        return PlanExecutor(event_publisher=mock_event_publisher, k8s_driver=mock_k8s_driver)
+        return PlanExecutor(
+            event_publisher=mock_event_publisher, k8s_driver=mock_k8s_driver
+        )
 
     @pytest.mark.asyncio
     async def test_execute_simple_scale_plan(self, executor):
@@ -101,7 +103,9 @@ class TestPlanExecutor:
     async def test_execute_plan_with_failure(self, executor, mock_k8s_driver):
         """Test plan execution with decision failure."""
         # Make K8s driver fail
-        mock_k8s_driver.scale_deployment = AsyncMock(side_effect=Exception("Scale failed"))
+        mock_k8s_driver.scale_deployment = AsyncMock(
+            side_effect=Exception("Scale failed")
+        )
 
         plan_id = uuid4()
         plan_data = {

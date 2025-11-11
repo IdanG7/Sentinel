@@ -44,7 +44,9 @@ class PipelineController:
         self._running = False
 
         # Initialize components
-        self.policy_engine = PolicyEngine(mode=EvaluationMode(settings.policy_engine_mode))
+        self.policy_engine = PolicyEngine(
+            mode=EvaluationMode(settings.policy_engine_mode)
+        )
         self.cluster_manager: ClusterManager | None = None
         self.consumer: AIOKafkaConsumer | None = None
         self.producer: AIOKafkaProducer | None = None
@@ -186,7 +188,9 @@ class PipelineController:
         self._active_deployments[deployment_id] = data
 
         # Execute deployment
-        assert self.deployment_executor is not None, "Deployment executor must be initialized"
+        assert (
+            self.deployment_executor is not None
+        ), "Deployment executor must be initialized"
         try:
             await self.deployment_executor.create_deployment(data)
             await self._publish_status_update(
@@ -207,9 +211,13 @@ class PipelineController:
         """
         deployment_id = UUID(data["deployment_id"])
         new_replicas = data["new_replicas"]
-        logger.info(f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas")
+        logger.info(
+            f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas"
+        )
 
-        assert self.deployment_executor is not None, "Deployment executor must be initialized"
+        assert (
+            self.deployment_executor is not None
+        ), "Deployment executor must be initialized"
         try:
             await self.deployment_executor.scale_deployment(deployment_id, new_replicas)
             await self._publish_status_update(
@@ -217,7 +225,9 @@ class PipelineController:
             )
         except Exception as e:
             logger.error(f"Failed to scale deployment {deployment_id}: {e}")
-            await self._publish_status_update(deployment_id, "failed", f"Scale failed: {str(e)}")
+            await self._publish_status_update(
+                deployment_id, "failed", f"Scale failed: {str(e)}"
+            )
 
     async def _handle_deployment_rollback(self, data: dict[str, Any]) -> None:
         """
@@ -229,7 +239,9 @@ class PipelineController:
         deployment_id = UUID(data["deployment_id"])
         logger.info(f"Handling deployment rollback: {deployment_id}")
 
-        assert self.deployment_executor is not None, "Deployment executor must be initialized"
+        assert (
+            self.deployment_executor is not None
+        ), "Deployment executor must be initialized"
         try:
             await self.deployment_executor.rollback_deployment(deployment_id)
             await self._publish_status_update(
@@ -248,7 +260,9 @@ class PipelineController:
         deployment_id = UUID(data["deployment_id"])
         logger.info(f"Handling deployment deletion: {deployment_id}")
 
-        assert self.deployment_executor is not None, "Deployment executor must be initialized"
+        assert (
+            self.deployment_executor is not None
+        ), "Deployment executor must be initialized"
         try:
             await self.deployment_executor.delete_deployment(deployment_id)
             # Remove from active deployments
@@ -309,7 +323,9 @@ class PipelineController:
             f"with {len(action_plan.decisions)} decisions"
         )
 
-        assert self.deployment_executor is not None, "Deployment executor must be initialized"
+        assert (
+            self.deployment_executor is not None
+        ), "Deployment executor must be initialized"
 
         for decision in action_plan.decisions:
             try:
@@ -333,7 +349,9 @@ class PipelineController:
                     logger.warning(f"Unknown decision verb: {verb}")
 
             except Exception as e:
-                logger.error(f"Error executing decision {decision.verb}: {e}", exc_info=True)
+                logger.error(
+                    f"Error executing decision {decision.verb}: {e}", exc_info=True
+                )
                 # Continue with other decisions even if one fails
 
     async def _health_check_loop(self) -> None:
@@ -351,9 +369,13 @@ class PipelineController:
                     f"Running health checks on {len(self._active_deployments)} deployments"
                 )
 
-                assert self.health_checker is not None, "Health checker must be initialized"
+                assert (
+                    self.health_checker is not None
+                ), "Health checker must be initialized"
 
-                for deployment_id, deployment_data in list(self._active_deployments.items()):
+                for deployment_id, deployment_data in list(
+                    self._active_deployments.items()
+                ):
                     try:
                         is_healthy = await self.health_checker.check_deployment_health(
                             deployment_id, deployment_data
@@ -375,7 +397,9 @@ class PipelineController:
         except Exception as e:
             logger.error(f"Error in health check loop: {e}", exc_info=True)
 
-    async def _publish_status_update(self, deployment_id: UUID, status: str, message: str) -> None:
+    async def _publish_status_update(
+        self, deployment_id: UUID, status: str, message: str
+    ) -> None:
         """
         Publish deployment status update to Kafka.
 

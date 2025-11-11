@@ -44,7 +44,9 @@ class WorkloadResources(BaseModel):
 
     cpu: str = Field(..., description="CPU request (e.g., '4' or '4000m')")
     memory: str = Field(..., description="Memory request (e.g., '8Gi')")
-    gpu: dict[str, Any] | None = Field(None, description="GPU requirements: {count: 1, sku: 'L4'}")
+    gpu: dict[str, Any] | None = Field(
+        None, description="GPU requirements: {count: 1, sku: 'L4'}"
+    )
 
 
 class WorkloadCreate(BaseModel):

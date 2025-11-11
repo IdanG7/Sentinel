@@ -34,7 +34,9 @@ class Application:
         logger.info("🚀 Starting Sentinel InfraMind Adapter...")
         logger.info(f"   Version: {__import__('app').__version__}")
         logger.info(f"   InfraMind URL: {self.settings.inframind_url}")
-        logger.info(f"   Telemetry Interval: {self.settings.telemetry_batch_interval_seconds}s")
+        logger.info(
+            f"   Telemetry Interval: {self.settings.telemetry_batch_interval_seconds}s"
+        )
 
         # Initialize adapter
         self.adapter = InfraMindAdapter(self.settings)

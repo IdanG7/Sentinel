@@ -148,7 +148,9 @@ class JobManager:
                 return False
             raise
 
-    def get_status(self, name: str, namespace: str = "default") -> Optional[ResourceStatusModel]:
+    def get_status(
+        self, name: str, namespace: str = "default"
+    ) -> Optional[ResourceStatusModel]:
         """
         Get job status.
 
@@ -205,7 +207,9 @@ class JobManager:
             message=message,
         )
 
-    def list(self, namespace: str = "default", labels: Optional[dict[str, str]] = None) -> list[V1Job]:
+    def list(
+        self, namespace: str = "default", labels: Optional[dict[str, str]] = None
+    ) -> list[V1Job]:
         """
         List jobs.
 

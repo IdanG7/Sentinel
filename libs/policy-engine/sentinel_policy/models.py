@@ -46,7 +46,9 @@ class Policy(BaseModel):
     id: UUID
     name: str = Field(..., min_length=3, max_length=255)
     rules: list[PolicyRule]
-    priority: int = Field(default=0, ge=0, le=1000, description="Higher = evaluated first")
+    priority: int = Field(
+        default=0, ge=0, le=1000, description="Higher = evaluated first"
+    )
     enabled: bool = True
     selector: Optional[dict[str, str]] = Field(
         default=None, description="Label selector to match decisions"
@@ -75,9 +77,7 @@ class Decision(BaseModel):
     verb: DecisionVerb
     target: dict[str, str] = Field(..., description="Target resource identifiers")
     params: dict[str, Any] = Field(..., description="Action parameters")
-    ttl: int = Field(
-        default=900, ge=60, le=3600, description="Time-to-live in seconds"
-    )
+    ttl: int = Field(default=900, ge=60, le=3600, description="Time-to-live in seconds")
     safety: Optional[dict[str, Any]] = Field(
         default=None, description="Safety constraints for the decision"
     )

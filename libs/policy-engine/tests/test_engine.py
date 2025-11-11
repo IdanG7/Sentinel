@@ -69,7 +69,13 @@ class TestPolicyEngine:
         disabled_policy = Policy(
             id=uuid4(),
             name="Disabled Policy",
-            rules=[PolicyRule(type=PolicyRuleType.QUOTA, constraint={}, action_on_violation="reject")],
+            rules=[
+                PolicyRule(
+                    type=PolicyRuleType.QUOTA,
+                    constraint={},
+                    action_on_violation="reject",
+                )
+            ],
             priority=50,
             enabled=False,
             created_at=datetime.utcnow(),
@@ -259,7 +265,10 @@ class TestPolicyEngine:
                 Decision(
                     verb=DecisionVerb.SCALE,
                     target={"deployment_id": str(uuid4())},
-                    params={"replicas": 1, "current_p99_latency_ms": 600},  # Exceeds SLO
+                    params={
+                        "replicas": 1,
+                        "current_p99_latency_ms": 600,
+                    },  # Exceeds SLO
                     ttl=900,
                 ),
             ],

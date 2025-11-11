@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, str(Path(__file__).parent.parent / "services" / "control-api"))
 
 from app.core.database import Base
+
 # Import all models so SQLAlchemy can create tables
 from app.models import database  # noqa: F401
 

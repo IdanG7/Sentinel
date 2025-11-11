@@ -140,9 +140,7 @@ class CanaryDeploymentController:
         )
         self._canary_tasks[canary_id] = task
 
-        logger.info(
-            f"Started canary deployment {canary_id} for {name} in {namespace}"
-        )
+        logger.info(f"Started canary deployment {canary_id} for {name} in {namespace}")
 
         return canary_id
 
@@ -186,9 +184,7 @@ class CanaryDeploymentController:
                 canary.current_percentage = next_percentage
 
                 # Wait for analysis duration
-                logger.info(
-                    f"Analyzing canary for {canary.config.analysis_duration}s"
-                )
+                logger.info(f"Analyzing canary for {canary.config.analysis_duration}s")
                 await asyncio.sleep(canary.config.analysis_duration)
 
                 # Check canary health
@@ -351,9 +347,7 @@ class CanaryDeploymentController:
 
         logger.info("Canary promotion completed")
 
-    async def _rollback_canary(
-        self, canary: CanaryDeployment, reason: str
-    ) -> None:
+    async def _rollback_canary(self, canary: CanaryDeployment, reason: str) -> None:
         """
         Rollback canary deployment due to health check failure.
 

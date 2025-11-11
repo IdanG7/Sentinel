@@ -36,7 +36,9 @@ class PolicyEngine:
     """
 
     def __init__(
-        self, mode: EvaluationMode = EvaluationMode.ENFORCE, rate_limiter: RateLimiter | None = None
+        self,
+        mode: EvaluationMode = EvaluationMode.ENFORCE,
+        rate_limiter: RateLimiter | None = None,
     ):
         """
         Initialize policy engine.
@@ -278,7 +280,9 @@ class PolicyEngine:
         # Build resource key based on scope
         scope = rule.constraint.get("scope", "workload")
         if scope == "workload":
-            resource_key = decision.target.get("workload") or decision.target.get("deployment_id")
+            resource_key = decision.target.get("workload") or decision.target.get(
+                "deployment_id"
+            )
         elif scope == "cluster":
             resource_key = f"cluster:{decision.target.get('cluster', 'default')}"
         elif scope == "namespace":

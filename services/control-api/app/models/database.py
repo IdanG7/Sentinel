@@ -3,7 +3,16 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -22,7 +31,9 @@ class User(Base):
     role = Column(String(50), nullable=False, default="operator")
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     def __repr__(self):
         return f"<User(username={self.username}, role={self.role})>"
@@ -43,10 +54,14 @@ class Cluster(Base):
     gpu_families = Column(JSON, default=list, nullable=False)
     status = Column(String(50), default="active", nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
-    deployments = relationship("Deployment", back_populates="cluster", cascade="all, delete-orphan")
+    deployments = relationship(
+        "Deployment", back_populates="cluster", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Cluster(name={self.name}, status={self.status})>"
@@ -65,7 +80,9 @@ class Workload(Base):
     env = Column(JSON, default=dict)
     config_ref = Column(String(512))
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
     deployments = relationship(
@@ -82,15 +99,21 @@ class Deployment(Base):
     __tablename__ = "deployments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    workload_id = Column(UUID(as_uuid=True), ForeignKey("workloads.id"), nullable=False, index=True)
-    cluster_id = Column(UUID(as_uuid=True), ForeignKey("clusters.id"), nullable=False, index=True)
+    workload_id = Column(
+        UUID(as_uuid=True), ForeignKey("workloads.id"), nullable=False, index=True
+    )
+    cluster_id = Column(
+        UUID(as_uuid=True), ForeignKey("clusters.id"), nullable=False, index=True
+    )
     strategy = Column(String(50), default="rolling", nullable=False)
     replicas = Column(Integer, default=1, nullable=False)
     canary_config = Column(JSON)
     status = Column(String(50), default="pending", nullable=False, index=True)
     message = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
     workload = relationship("Workload", back_populates="deployments")
@@ -111,7 +134,9 @@ class Policy(Base):
     priority = Column(Integer, default=0, nullable=False, index=True)
     enabled = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     def __repr__(self):
         return f"<Policy(name={self.name}, priority={self.priority}, enabled={self.enabled})>"

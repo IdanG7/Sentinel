@@ -34,7 +34,10 @@ class CRUDDeployment(CRUDBase[Deployment, DeploymentCreate, DeploymentCreate]):
             List of deployments
         """
         result = await db.execute(
-            select(Deployment).where(Deployment.status == status).offset(skip).limit(limit)
+            select(Deployment)
+            .where(Deployment.status == status)
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
@@ -59,7 +62,10 @@ class CRUDDeployment(CRUDBase[Deployment, DeploymentCreate, DeploymentCreate]):
             List of deployments
         """
         result = await db.execute(
-            select(Deployment).where(Deployment.cluster_id == cluster_id).offset(skip).limit(limit)
+            select(Deployment)
+            .where(Deployment.cluster_id == cluster_id)
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all())
 

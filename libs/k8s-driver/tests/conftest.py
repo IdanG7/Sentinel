@@ -67,8 +67,18 @@ def mock_k8s_deployment():
     deployment.status.ready_replicas = 3
     deployment.status.available_replicas = 3
     deployment.status.conditions = [
-        Mock(type="Available", status="True", reason="MinimumReplicasAvailable", message="Deployment has minimum availability"),
-        Mock(type="Progressing", status="True", reason="NewReplicaSetAvailable", message="ReplicaSet has successfully progressed"),
+        Mock(
+            type="Available",
+            status="True",
+            reason="MinimumReplicasAvailable",
+            message="Deployment has minimum availability",
+        ),
+        Mock(
+            type="Progressing",
+            status="True",
+            reason="NewReplicaSetAvailable",
+            message="ReplicaSet has successfully progressed",
+        ),
     ]
 
     return deployment

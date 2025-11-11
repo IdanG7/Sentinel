@@ -78,7 +78,9 @@ class HealthChecker:
             # Check failure threshold
             if not is_healthy:
                 recent_checks = self._health_history[deployment_id][-5:]
-                failure_rate = (len([x for x in recent_checks if not x]) / len(recent_checks)) * 100
+                failure_rate = (
+                    len([x for x in recent_checks if not x]) / len(recent_checks)
+                ) * 100
 
                 if failure_rate >= self.settings.rollback_threshold_failure_percent:
                     logger.error(
@@ -90,7 +92,9 @@ class HealthChecker:
             return is_healthy
 
         except Exception as e:
-            logger.error(f"Error checking health for {deployment_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error checking health for {deployment_id}: {e}", exc_info=True
+            )
             return False
 
     def _evaluate_health(self, status: Any, deployment_data: dict[str, Any]) -> bool:
@@ -121,7 +125,9 @@ class HealthChecker:
 
             # Check for progressing condition
             if condition_type == "Progressing" and condition_status != "True":
-                logger.warning(f"Deployment not progressing: {condition.get('message')}")
+                logger.warning(
+                    f"Deployment not progressing: {condition.get('message')}"
+                )
                 return False
 
             # Check for available condition

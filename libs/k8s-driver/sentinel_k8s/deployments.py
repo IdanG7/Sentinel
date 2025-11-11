@@ -215,7 +215,9 @@ class DeploymentManager:
                 return False
             raise
 
-    def get_status(self, name: str, namespace: str = "default") -> Optional[ResourceStatusModel]:
+    def get_status(
+        self, name: str, namespace: str = "default"
+    ) -> Optional[ResourceStatusModel]:
         """
         Get deployment status.
 
@@ -265,7 +267,9 @@ class DeploymentManager:
             created_at=deployment.metadata.creation_timestamp,
         )
 
-    def list(self, namespace: str = "default", labels: Optional[dict[str, str]] = None) -> list[V1Deployment]:
+    def list(
+        self, namespace: str = "default", labels: Optional[dict[str, str]] = None
+    ) -> list[V1Deployment]:
         """
         List deployments.
 

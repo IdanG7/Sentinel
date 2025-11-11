@@ -49,7 +49,10 @@ def sample_sla_policy():
         rules=[
             PolicyRule(
                 type=PolicyRuleType.SLA,
-                constraint={"min_uptime_percent": 99.9, "measurement_window_hours": 720},
+                constraint={
+                    "min_uptime_percent": 99.9,
+                    "measurement_window_hours": 720,
+                },
                 action_on_violation="reject",
             ),
         ],
@@ -87,7 +90,10 @@ def violating_action_plan():
             Decision(
                 verb=DecisionVerb.SCALE,
                 target={"deployment_id": str(uuid4()), "cluster": "prod"},
-                params={"replicas": 5, "estimated_cost_per_hour": 150},  # Only cost exceeds
+                params={
+                    "replicas": 5,
+                    "estimated_cost_per_hour": 150,
+                },  # Only cost exceeds
                 ttl=900,
             ),
         ],

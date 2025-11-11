@@ -222,7 +222,9 @@ class StatefulSetManager:
                 return False
             raise
 
-    def get_status(self, name: str, namespace: str = "default") -> Optional[ResourceStatusModel]:
+    def get_status(
+        self, name: str, namespace: str = "default"
+    ) -> Optional[ResourceStatusModel]:
         """
         Get statefulset status.
 
@@ -255,7 +257,9 @@ class StatefulSetManager:
             overall_status = "running"
         elif status.replicas is None or status.replicas == 0:
             overall_status = "pending"
-        elif status.ready_replicas and status.ready_replicas < statefulset.spec.replicas:
+        elif (
+            status.ready_replicas and status.ready_replicas < statefulset.spec.replicas
+        ):
             overall_status = "scaling"
         elif status.current_replicas != status.updated_replicas:
             overall_status = "updating"
@@ -274,7 +278,9 @@ class StatefulSetManager:
             created_at=statefulset.metadata.creation_timestamp,
         )
 
-    def list(self, namespace: str = "default", labels: Optional[dict[str, str]] = None) -> list[V1StatefulSet]:
+    def list(
+        self, namespace: str = "default", labels: Optional[dict[str, str]] = None
+    ) -> list[V1StatefulSet]:
         """
         List statefulsets.
 

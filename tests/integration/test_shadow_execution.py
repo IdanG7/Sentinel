@@ -271,9 +271,7 @@ class TestShadowExecution:
         )
 
         # Live execution
-        live_result = await executor.execute_plan(
-            uuid4(), plan_data, shadow_mode=False
-        )
+        live_result = await executor.execute_plan(uuid4(), plan_data, shadow_mode=False)
 
         # Shadow should be significantly faster
         assert shadow_result["duration_seconds"] < live_result["duration_seconds"] * 0.5

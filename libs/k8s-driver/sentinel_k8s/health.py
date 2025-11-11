@@ -169,9 +169,7 @@ class DeploymentHealthChecker:
             score=score,
         )
 
-    def _check_pod_health(
-        self, pods: list[V1Pod], max_restart_count: int
-    ) -> list[str]:
+    def _check_pod_health(self, pods: list[V1Pod], max_restart_count: int) -> list[str]:
         """
         Check health of individual pods.
 
