@@ -29,9 +29,7 @@ class Settings(BaseSettings):
     workers: int = 4
 
     # Database Settings
-    database_url: str = Field(
-        default="postgresql://sentinel:sentinel@localhost:5432/sentinel"
-    )
+    database_url: str = Field(default="postgresql://sentinel:sentinel@localhost:5432/sentinel")
     database_pool_size: int = 20
     database_max_overflow: int = 10
 
