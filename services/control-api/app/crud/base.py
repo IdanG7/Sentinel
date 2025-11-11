@@ -1,6 +1,6 @@
 """Base CRUD operations."""
 
-from typing import Any, Generic, List, Optional, Type, TypeVar
+from typing import Any, Generic, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     """Base class for CRUD operations."""
 
-    def __init__(self, model: Type[ModelType]):
+    def __init__(self, model: type[ModelType]):
         """
         Initialize CRUD object.
 
@@ -26,7 +26,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         self.model = model
 
-    async def get(self, db: AsyncSession, id: UUID) -> Optional[ModelType]:
+    async def get(self, db: AsyncSession, id: UUID) -> ModelType | None:
         """
         Get a single record by ID.
 
@@ -46,7 +46,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         *,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[ModelType]:
+    ) -> list[ModelType]:
         """
         Get multiple records.
 
@@ -115,7 +115,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.refresh(db_obj)
         return db_obj
 
-    async def delete(self, db: AsyncSession, *, id: UUID) -> Optional[ModelType]:
+    async def delete(self, db: AsyncSession, *, id: UUID) -> ModelType | None:
         """
         Delete a record.
 

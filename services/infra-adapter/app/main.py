@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import signal
-from typing import Optional
 
 from app.adapter import InfraMindAdapter
 from app.config import Settings, get_settings

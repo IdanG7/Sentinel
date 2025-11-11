@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -44,7 +44,7 @@ class WorkloadResources(BaseModel):
 
     cpu: str = Field(..., description="CPU request (e.g., '4' or '4000m')")
     memory: str = Field(..., description="Memory request (e.g., '8Gi')")
-    gpu: Optional[dict[str, Any]] = Field(
+    gpu: dict[str, Any] | None = Field(
         None, description="GPU requirements: {count: 1, sku: 'L4'}"
     )
 
@@ -56,8 +56,8 @@ class WorkloadCreate(BaseModel):
     type: WorkloadType
     image: str = Field(..., min_length=5, max_length=512)
     resources: WorkloadResources
-    env: Optional[dict[str, str]] = None
-    config_ref: Optional[str] = None
+    env: dict[str, str] | None = None
+    config_ref: str | None = None
 
 
 class WorkloadResponse(BaseModel):
@@ -68,8 +68,8 @@ class WorkloadResponse(BaseModel):
     type: WorkloadType
     image: str
     resources: dict[str, Any]
-    env: Optional[dict[str, str]] = None
-    config_ref: Optional[str] = None
+    env: dict[str, str] | None = None
+    config_ref: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -101,7 +101,7 @@ class DeploymentCreate(BaseModel):
     cluster_id: UUID
     strategy: DeploymentStrategy = DeploymentStrategy.ROLLING
     replicas: int = Field(1, ge=0, le=100)
-    canary_config: Optional[CanaryConfig] = None
+    canary_config: CanaryConfig | None = None
 
 
 class DeploymentStatus(str, Enum):
@@ -122,7 +122,7 @@ class DeploymentResponse(BaseModel):
     cluster_id: UUID
     strategy: DeploymentStrategy
     replicas: int
-    canary_config: Optional[dict[str, Any]] = None
+    canary_config: dict[str, Any] | None = None
     status: DeploymentStatus
     created_at: datetime
     updated_at: datetime
@@ -152,7 +152,7 @@ class PolicyRule(BaseModel):
     """Policy rule schema."""
 
     type: PolicyRuleType
-    selector: Optional[dict[str, str]] = None
+    selector: dict[str, str] | None = None
     constraint: dict[str, Any]
     action_on_violation: str = "reject"
 
@@ -199,7 +199,7 @@ class Decision(BaseModel):
     target: dict[str, str] = Field(..., description="Target resource identifiers")
     params: dict[str, Any] = Field(..., description="Action parameters")
     ttl: int = Field(900, ge=60, le=3600, description="Time-to-live in seconds")
-    safety: Optional[dict[str, Any]] = None
+    safety: dict[str, Any] | None = None
 
 
 class ActionPlanSource(str, Enum):
@@ -215,7 +215,7 @@ class ActionPlanCreate(BaseModel):
 
     decisions: list[Decision]
     source: ActionPlanSource
-    correlation_id: Optional[str] = None
+    correlation_id: str | None = None
 
 
 class ActionPlanStatus(str, Enum):
@@ -236,10 +236,10 @@ class ActionPlanResponse(BaseModel):
     id: UUID
     decisions: list[dict[str, Any]]
     source: ActionPlanSource
-    correlation_id: Optional[str] = None
+    correlation_id: str | None = None
     status: ActionPlanStatus
     created_at: datetime
-    executed_at: Optional[datetime] = None
+    executed_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -255,8 +255,8 @@ class AuditLogResponse(BaseModel):
     verb: str
     target: dict[str, Any]
     result: str
-    reason: Optional[str] = None
-    metadata: Optional[dict[str, Any]] = None
+    reason: str | None = None
+    metadata: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True

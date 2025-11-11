@@ -3,7 +3,7 @@
 import json
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from aiokafka import AIOKafkaProducer
@@ -26,7 +26,7 @@ class EventPublisher:
             settings: Application settings
         """
         self.settings = settings
-        self.producer: Optional[AIOKafkaProducer] = None
+        self.producer: AIOKafkaProducer | None = None
         self._initialized = False
 
     async def start(self) -> None:
@@ -59,7 +59,7 @@ class EventPublisher:
         topic: str,
         event_type: str,
         data: dict[str, Any],
-        key: Optional[str] = None,
+        key: str | None = None,
     ) -> bool:
         """
         Publish an event to Kafka.
@@ -121,8 +121,8 @@ class EventPublisher:
         verb: str,
         target: dict[str, Any],
         result: str,
-        reason: Optional[str] = None,
-        metadata: Optional[dict[str, Any]] = None,
+        reason: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """
         Publish an audit log event.
@@ -226,7 +226,7 @@ class EventPublisher:
 
 
 # Global event publisher instance
-_event_publisher: Optional[EventPublisher] = None
+_event_publisher: EventPublisher | None = None
 
 
 def get_event_publisher() -> EventPublisher:

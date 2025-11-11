@@ -1,7 +1,6 @@
 """Tests for Control API endpoints."""
 
 import pytest
-from fastapi.testclient import TestClient
 
 
 class TestHealthEndpoint:

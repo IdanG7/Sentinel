@@ -1,6 +1,5 @@
 """CRUD operations for users."""
 
-from typing import Optional
 
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -27,7 +26,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserCreate]):
         db: AsyncSession,
         *,
         username: str,
-    ) -> Optional[User]:
+    ) -> User | None:
         """
         Get user by username.
 

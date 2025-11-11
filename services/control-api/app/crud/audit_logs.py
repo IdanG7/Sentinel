@@ -1,6 +1,5 @@
 """CRUD operations for audit logs."""
 
-from typing import List
 
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -31,7 +30,7 @@ class CRUDAuditLog(CRUDBase[AuditLog, AuditLogCreate, AuditLogCreate]):
         actor: str,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[AuditLog]:
+    ) -> list[AuditLog]:
         """
         Get audit logs by actor.
 

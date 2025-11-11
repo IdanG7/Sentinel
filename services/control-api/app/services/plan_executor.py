@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from app.core.events import EventPublisher
@@ -31,9 +31,9 @@ class PlanExecutor:
 
     def __init__(
         self,
-        event_publisher: Optional[EventPublisher] = None,
-        k8s_driver: Optional[Any] = None,
-        policy_engine: Optional[Any] = None,
+        event_publisher: EventPublisher | None = None,
+        k8s_driver: Any | None = None,
+        policy_engine: Any | None = None,
     ):
         """
         Initialize plan executor.
@@ -223,7 +223,7 @@ class PlanExecutor:
             for decision in decisions:
                 verb = decision.get("verb")
                 target = decision.get("target", {})
-                params = decision.get("params", {})
+                # params = decision.get("params", {})  # Reserved for future use
 
                 # Validate with policy engine
                 # This is a simplified version - actual implementation would be more robust
@@ -365,7 +365,7 @@ class PlanExecutor:
             "status": "success (mocked)",
         }
 
-    def get_execution_status(self, plan_id: UUID) -> Optional[dict[str, Any]]:
+    def get_execution_status(self, plan_id: UUID) -> dict[str, Any] | None:
         """
         Get execution status for a plan.
 

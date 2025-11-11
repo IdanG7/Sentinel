@@ -1,6 +1,5 @@
 """CRUD operations for deployments."""
 
-from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,7 +20,7 @@ class CRUDDeployment(CRUDBase[Deployment, DeploymentCreate, DeploymentCreate]):
         status: str,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[Deployment]:
+    ) -> list[Deployment]:
         """
         Get deployments by status.
 
@@ -46,7 +45,7 @@ class CRUDDeployment(CRUDBase[Deployment, DeploymentCreate, DeploymentCreate]):
         cluster_id: UUID,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[Deployment]:
+    ) -> list[Deployment]:
         """
         Get deployments by cluster.
 

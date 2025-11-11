@@ -11,10 +11,8 @@ import grpc
 
 from .config import Settings
 from .proto import (
-    ActionPlan,
-    ActionPlanRequest,
     Ack,
-    PlanAck,
+    ActionPlan,
     TelemetryBatch,
     TelemetryPoint,
 )

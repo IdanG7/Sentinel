@@ -86,8 +86,9 @@ class TestInfraMindAdapter:
     @pytest.mark.asyncio
     async def test_send_telemetry_batch(self, settings):
         """Test sending telemetry batch to InfraMind."""
-        from app.grpc_client import InfraMindClient
         from datetime import datetime
+
+        from app.grpc_client import InfraMindClient
 
         client = InfraMindClient(settings)
         client.connected = True

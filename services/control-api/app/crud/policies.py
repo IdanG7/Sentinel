@@ -1,6 +1,5 @@
 """CRUD operations for policies."""
 
-from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +18,7 @@ class CRUDPolicy(CRUDBase[Policy, PolicyCreate, PolicyCreate]):
         *,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[Policy]:
+    ) -> list[Policy]:
         """
         Get enabled policies ordered by priority.
 
@@ -33,7 +32,7 @@ class CRUDPolicy(CRUDBase[Policy, PolicyCreate, PolicyCreate]):
         """
         result = await db.execute(
             select(Policy)
-            .where(Policy.enabled == True)
+            .where(Policy.enabled)
             .order_by(Policy.priority.desc())
             .offset(skip)
             .limit(limit)

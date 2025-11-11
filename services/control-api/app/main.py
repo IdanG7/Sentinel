@@ -1,5 +1,6 @@
 """Sentinel Control API - Main application entry point."""
 
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from app.api.v1 import action_plans, auth, deployments, policies, workloads
 from app.core.config import get_settings
 from app.models.schemas import HealthResponse
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Prometheus metrics
@@ -31,34 +33,34 @@ http_request_duration_seconds = Histogram(
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
-    print("🚀 Starting Sentinel Control API...")
-    print(f"   Version: {settings.api_version}")
-    print(f"   Environment: {'Development' if settings.debug else 'Production'}")
-    print(
+    logger.info("Starting Sentinel Control API...")
+    logger.info(f"   Version: {settings.api_version}")
+    logger.info(f"   Environment: {'Development' if settings.debug else 'Production'}")
+    logger.info(
         f"   Database: {settings.database_url_str.split('@')[1] if '@' in settings.database_url_str else 'configured'}"
     )
-    print(f"   Kafka: {settings.kafka_bootstrap_servers}")
+    logger.info(f"   Kafka: {settings.kafka_bootstrap_servers}")
 
     # Initialize database
     from app.core.database import init_db
 
     await init_db()
-    print("   ✓ Database initialized")
+    logger.info("   Database initialized")
 
     # Initialize event publisher
     from app.core.events import init_event_publisher
 
     await init_event_publisher(settings)
-    print("   ✓ Event publisher initialized")
+    logger.info("   Event publisher initialized")
 
     yield
 
     # Shutdown
-    print("🛑 Shutting down Sentinel Control API...")
+    logger.info("Shutting down Sentinel Control API...")
     from app.core.events import shutdown_event_publisher
 
     await shutdown_event_publisher()
-    print("   ✓ Event publisher stopped")
+    logger.info("   Event publisher stopped")
 
 
 app = FastAPI(

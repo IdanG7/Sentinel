@@ -1,5 +1,6 @@
 """Action plan management endpoints."""
 
+import logging
 from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -15,6 +16,7 @@ from app.models.schemas import (
 )
 from app.services.plan_executor import PlanExecutor
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/action-plans", tags=["action-plans"])
 
 # In-memory storage (replace with database)
@@ -152,6 +154,7 @@ async def execute_action_plan(
 
         except Exception as e:
             # Update plan status on failure
+            logger.error(f"Failed to execute plan {plan_id}: {e}", exc_info=True)
             plan["status"] = ActionPlanStatus.FAILED.value
             action_plans_db[plan_id] = plan
 

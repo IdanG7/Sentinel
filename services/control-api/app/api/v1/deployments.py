@@ -1,6 +1,5 @@
 """Deployment management endpoints."""
 
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -81,46 +80,77 @@ async def create_deployment(
 
 @router.get("", response_model=list[DeploymentResponse])
 async def list_deployments(
+    db: AsyncSession = Depends(get_session),
     current_user: str = Depends(get_current_user),
 ) -> list[DeploymentResponse]:
     """
     List all deployments.
     """
-    return [DeploymentResponse(**d) for d in deployments_db.values()]
+    deployments = await deployment_crud.get_multi(db)
+    return [
+        DeploymentResponse(
+            id=d.id,
+            workload_id=d.workload_id,
+            cluster_id=d.cluster_id,
+            strategy=d.strategy,
+            replicas=d.replicas,
+            canary_config=d.canary_config,
+            status=d.status,
+            created_at=d.created_at,
+            updated_at=d.updated_at,
+        )
+        for d in deployments
+    ]
 
 
 @router.get("/{deployment_id}", response_model=DeploymentResponse)
 async def get_deployment(
     deployment_id: UUID,
+    db: AsyncSession = Depends(get_session),
     current_user: str = Depends(get_current_user),
 ) -> DeploymentResponse:
     """
     Get a specific deployment by ID.
     """
-    deployment = deployments_db.get(deployment_id)
+    deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
 
-    return DeploymentResponse(**deployment)
+    return DeploymentResponse(
+        id=deployment.id,
+        workload_id=deployment.workload_id,
+        cluster_id=deployment.cluster_id,
+        strategy=deployment.strategy,
+        replicas=deployment.replicas,
+        canary_config=deployment.canary_config,
+        status=deployment.status,
+        created_at=deployment.created_at,
+        updated_at=deployment.updated_at,
+    )
 
 
 @router.post("/{deployment_id}/scale", response_model=DeploymentResponse)
 async def scale_deployment(
     deployment_id: UUID,
     scale_request: ScaleRequest,
+    db: AsyncSession = Depends(get_session),
     current_user: str = Depends(get_current_user),
 ) -> DeploymentResponse:
     """
     Scale a deployment to the specified number of replicas.
     """
-    deployment = deployments_db.get(deployment_id)
+    deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
 
-    old_replicas = deployment["replicas"]
-    deployment["replicas"] = scale_request.replicas
-    deployment["status"] = DeploymentStatus.DEPLOYING.value
-    deployment["updated_at"] = datetime.utcnow()
+    old_replicas = deployment.replicas
+
+    # Update deployment with new replica count
+    updated_deployment = await deployment_crud.update(
+        db,
+        db_obj=deployment,
+        obj_in={"replicas": scale_request.replicas, "status": DeploymentStatus.DEPLOYING.value},
+    )
 
     # Publish events to Kafka
     event_publisher = get_event_publisher()
@@ -128,7 +158,7 @@ async def scale_deployment(
         deployment_id=deployment_id,
         event_type="deployment.scaled",
         data={
-            "deployment_id": deployment_id,
+            "deployment_id": str(deployment_id),
             "old_replicas": old_replicas,
             "new_replicas": scale_request.replicas,
         },
@@ -141,30 +171,45 @@ async def scale_deployment(
         metadata={"old_replicas": old_replicas, "new_replicas": scale_request.replicas},
     )
 
-    return DeploymentResponse(**deployment)
+    return DeploymentResponse(
+        id=updated_deployment.id,
+        workload_id=updated_deployment.workload_id,
+        cluster_id=updated_deployment.cluster_id,
+        strategy=updated_deployment.strategy,
+        replicas=updated_deployment.replicas,
+        canary_config=updated_deployment.canary_config,
+        status=updated_deployment.status,
+        created_at=updated_deployment.created_at,
+        updated_at=updated_deployment.updated_at,
+    )
 
 
 @router.post("/{deployment_id}/rollback", response_model=DeploymentResponse)
 async def rollback_deployment(
     deployment_id: UUID,
+    db: AsyncSession = Depends(get_session),
     current_user: str = Depends(get_current_user),
 ) -> DeploymentResponse:
     """
     Rollback a deployment to the previous version.
     """
-    deployment = deployments_db.get(deployment_id)
+    deployment = await deployment_crud.get(db, id=deployment_id)
     if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
 
-    deployment["status"] = DeploymentStatus.ROLLED_BACK.value
-    deployment["updated_at"] = datetime.utcnow()
+    # Update deployment status to rolled back
+    updated_deployment = await deployment_crud.update(
+        db,
+        db_obj=deployment,
+        obj_in={"status": DeploymentStatus.ROLLED_BACK.value},
+    )
 
     # Publish events to Kafka
     event_publisher = get_event_publisher()
     await event_publisher.publish_deployment_event(
         deployment_id=deployment_id,
         event_type="deployment.rollback",
-        data={"deployment_id": deployment_id},
+        data={"deployment_id": str(deployment_id)},
     )
     await event_publisher.publish_audit_event(
         actor=current_user,
@@ -173,18 +218,30 @@ async def rollback_deployment(
         result="success",
     )
 
-    return DeploymentResponse(**deployment)
+    return DeploymentResponse(
+        id=updated_deployment.id,
+        workload_id=updated_deployment.workload_id,
+        cluster_id=updated_deployment.cluster_id,
+        strategy=updated_deployment.strategy,
+        replicas=updated_deployment.replicas,
+        canary_config=updated_deployment.canary_config,
+        status=updated_deployment.status,
+        created_at=updated_deployment.created_at,
+        updated_at=updated_deployment.updated_at,
+    )
 
 
 @router.delete("/{deployment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_deployment(
     deployment_id: UUID,
+    db: AsyncSession = Depends(get_session),
     current_user: str = Depends(get_current_user),
 ) -> None:
     """
     Delete a deployment.
     """
-    if deployment_id not in deployments_db:
+    deployment = await deployment_crud.get(db, id=deployment_id)
+    if not deployment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found")
 
     # Publish events to Kafka to cleanup cluster resources
@@ -192,7 +249,7 @@ async def delete_deployment(
     await event_publisher.publish_deployment_event(
         deployment_id=deployment_id,
         event_type="deployment.deleted",
-        data={"deployment_id": deployment_id},
+        data={"deployment_id": str(deployment_id)},
     )
     await event_publisher.publish_audit_event(
         actor=current_user,
@@ -201,4 +258,5 @@ async def delete_deployment(
         result="success",
     )
 
-    del deployments_db[deployment_id]
+    # Delete deployment from database
+    await deployment_crud.delete(db, id=deployment_id)

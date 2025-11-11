@@ -1,6 +1,5 @@
 """CRUD operations for clusters."""
 
-from typing import Optional
 
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -30,7 +29,7 @@ class CRUDCluster(CRUDBase[Cluster, ClusterCreate, ClusterCreate]):
         db: AsyncSession,
         *,
         name: str,
-    ) -> Optional[Cluster]:
+    ) -> Cluster | None:
         """
         Get cluster by name.
 

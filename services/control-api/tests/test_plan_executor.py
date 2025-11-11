@@ -1,11 +1,12 @@
 """Tests for Plan Executor."""
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-from app.services.plan_executor import PlanExecutor, PlanExecutionError
+import pytest
+
+from app.services.plan_executor import PlanExecutionError, PlanExecutor
 
 
 class TestPlanExecutor:

@@ -1,7 +1,7 @@
 """Security utilities for authentication and authorization."""
 
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -101,7 +101,7 @@ async def get_current_user(
         )
 
     # Extract subject (username/user_id)
-    subject: Optional[str] = payload.get("sub")
+    subject: str | None = payload.get("sub")
     if subject is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

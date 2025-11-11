@@ -1,10 +1,9 @@
 """Database models for Sentinel Control API."""
 
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
