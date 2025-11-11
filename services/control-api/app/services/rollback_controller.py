@@ -106,9 +106,7 @@ class RollbackController:
         self._monitored_deployments[deployment_id] = monitoring_config
 
         # Start monitoring task
-        task = asyncio.create_task(
-            self._monitoring_loop(deployment_id, monitoring_config)
-        )
+        task = asyncio.create_task(self._monitoring_loop(deployment_id, monitoring_config))
         self._monitoring_tasks[deployment_id] = task
 
         logger.info(
@@ -118,9 +116,7 @@ class RollbackController:
 
         return session_id
 
-    async def _monitoring_loop(
-        self, deployment_id: str, config: dict[str, Any]
-    ) -> None:
+    async def _monitoring_loop(self, deployment_id: str, config: dict[str, Any]) -> None:
         """
         Continuous monitoring loop for a deployment.
 
@@ -138,9 +134,7 @@ class RollbackController:
                 # Check if monitoring window expired
                 elapsed = (datetime.utcnow() - started_at).total_seconds()
                 if elapsed > self.health_check_window:
-                    logger.info(
-                        f"Monitoring window expired for {name} after {elapsed:.0f}s"
-                    )
+                    logger.info(f"Monitoring window expired for {name} after {elapsed:.0f}s")
                     break
 
                 # Perform health check
@@ -191,9 +185,7 @@ class RollbackController:
             if deployment_id in self._monitoring_tasks:
                 del self._monitoring_tasks[deployment_id]
 
-    async def _check_deployment_health(
-        self, name: str, namespace: str
-    ) -> Any:
+    async def _check_deployment_health(self, name: str, namespace: str) -> Any:
         """
         Check deployment health.
 
