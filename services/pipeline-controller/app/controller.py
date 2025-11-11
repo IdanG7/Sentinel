@@ -9,7 +9,11 @@ from uuid import UUID
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore[import-untyped]
 from sentinel_k8s import ClusterManager  # type: ignore[import-not-found]
-from sentinel_policy import ActionPlan, EvaluationMode, PolicyEngine  # type: ignore[import-not-found]
+from sentinel_policy import (  # type: ignore[import-not-found]
+    ActionPlan,
+    EvaluationMode,
+    PolicyEngine,
+)
 
 from .config import Settings
 from .executors import DeploymentExecutor
