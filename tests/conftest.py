@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 import asyncio
 from typing import AsyncGenerator
 
@@ -24,7 +25,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_db():
     """Create test database."""
     # Use in-memory SQLite for tests
