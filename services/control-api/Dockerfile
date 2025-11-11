@@ -8,20 +8,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install local dependencies first
+# Copy and build local dependencies as wheels
 COPY libs/sentinel-common /build/libs/sentinel-common
 COPY libs/k8s-driver /build/libs/k8s-driver
-RUN pip install --no-cache-dir /build/libs/sentinel-common && \
-    pip install --no-cache-dir /build/libs/k8s-driver
+RUN pip install --no-cache-dir build && \
+    cd /build/libs/sentinel-common && python -m build --wheel && \
+    mkdir -p /build/wheels && cp dist/*.whl /build/wheels/ && \
+    cd /build/libs/k8s-driver && python -m build --wheel && \
+    cp dist/*.whl /build/wheels/
 
 # Copy service files
-COPY services/control-api/pyproject.toml .
-COPY services/control-api/app/ ./app/
+COPY services/control-api/pyproject.toml /build/
+COPY services/control-api/app/ /build/app/
 
-# Build the service wheel
-RUN pip install --no-cache-dir build && \
+# Install local dependencies and build the service wheel
+WORKDIR /build
+RUN pip install --no-cache-dir /build/wheels/sentinel_common-*.whl && \
+    pip install --no-cache-dir /build/wheels/sentinel_k8s_driver-*.whl && \
+    pip install --no-cache-dir fastapi>=0.104.0 uvicorn[standard]>=0.24.0 pydantic-settings>=2.1.0 python-jose[cryptography]>=3.3.0 passlib[bcrypt]>=1.7.4 python-multipart>=0.0.6 httpx>=0.25.0 sqlalchemy>=2.0.23 alembic>=1.12.0 asyncpg>=0.29.0 prometheus-client>=0.19.0 aiokafka>=0.10.0 hvac>=2.1.0 tenacity>=8.2.0 && \
     python -m build --wheel && \
-    pip wheel --no-cache-dir --wheel-dir=/build/wheels -e .
+    cp dist/*.whl /build/wheels/
 
 # Final stage
 FROM python:3.11-slim
@@ -35,7 +41,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy wheels and install
 COPY --from=builder /build/wheels /wheels
-RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+RUN pip install --no-cache-dir /wheels/sentinel_common-*.whl && \
+    pip install --no-cache-dir /wheels/sentinel_k8s_driver-*.whl && \
+    pip install --no-cache-dir /wheels/sentinel_control_api-*.whl && \
+    rm -rf /wheels
 
 # Copy application code
 COPY services/control-api/app/ /app/app/

@@ -7,22 +7,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install local dependencies first
+# Copy and build local dependencies as wheels
 COPY libs/sentinel-common /build/libs/sentinel-common
 COPY libs/k8s-driver /build/libs/k8s-driver
 COPY libs/policy-engine /build/libs/policy-engine
-RUN pip install --no-cache-dir /build/libs/sentinel-common && \
-    pip install --no-cache-dir /build/libs/k8s-driver && \
-    pip install --no-cache-dir /build/libs/policy-engine
+RUN pip install --no-cache-dir build && \
+    cd /build/libs/sentinel-common && python -m build --wheel && \
+    mkdir -p /build/wheels && cp dist/*.whl /build/wheels/ && \
+    cd /build/libs/k8s-driver && python -m build --wheel && \
+    cp dist/*.whl /build/wheels/ && \
+    cd /build/libs/policy-engine && python -m build --wheel && \
+    cp dist/*.whl /build/wheels/
 
 # Copy service files
-COPY services/pipeline-controller/pyproject.toml .
-COPY services/pipeline-controller/app/ ./app/
+COPY services/pipeline-controller/pyproject.toml /build/
+COPY services/pipeline-controller/app/ /build/app/
 
-# Build the service wheel
-RUN pip install --no-cache-dir build && \
+# Install local dependencies and build the service wheel
+WORKDIR /build
+RUN pip install --no-cache-dir /build/wheels/sentinel_common-*.whl && \
+    pip install --no-cache-dir /build/wheels/sentinel_k8s_driver-*.whl && \
+    pip install --no-cache-dir /build/wheels/sentinel_policy_engine-*.whl && \
     python -m build --wheel && \
-    pip wheel --no-cache-dir --wheel-dir=/build/wheels -e .
+    cp dist/*.whl /build/wheels/
 
 FROM python:3.11-slim
 
@@ -33,7 +40,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/wheels /wheels
-RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+RUN pip install --no-cache-dir /wheels/sentinel_common-*.whl && \
+    pip install --no-cache-dir /wheels/sentinel_k8s_driver-*.whl && \
+    pip install --no-cache-dir /wheels/sentinel_policy_engine-*.whl && \
+    pip install --no-cache-dir /wheels/sentinel_pipeline_controller-*.whl && \
+    rm -rf /wheels
 
 COPY services/pipeline-controller/app/ /app/app/
 
