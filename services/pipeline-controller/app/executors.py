@@ -4,13 +4,13 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from aiokafka import AIOKafkaProducer
-from sentinel_k8s import (
+from aiokafka import AIOKafkaProducer  # type: ignore[import-untyped]
+from sentinel_k8s import (  # type: ignore[import-not-found]
     ClusterManager,
     DeploymentManager,
     DeploymentSpec,
 )
-from sentinel_policy import Decision
+from sentinel_policy import Decision  # type: ignore[import-not-found]
 
 from .config import Settings
 

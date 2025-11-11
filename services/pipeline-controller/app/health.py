@@ -4,7 +4,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from sentinel_k8s import ClusterManager, DeploymentManager
+from sentinel_k8s import ClusterManager, DeploymentManager  # type: ignore[import-not-found]
 
 from .config import Settings
 

@@ -7,9 +7,9 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from sentinel_k8s import ClusterManager
-from sentinel_policy import ActionPlan, EvaluationMode, PolicyEngine
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore[import-untyped]
+from sentinel_k8s import ClusterManager  # type: ignore[import-not-found]
+from sentinel_policy import ActionPlan, EvaluationMode, PolicyEngine  # type: ignore[import-not-found]
 
 from .config import Settings
 from .executors import DeploymentExecutor
@@ -132,6 +132,8 @@ class PipelineController:
         """Consume events from Kafka and process them."""
         logger.info("Starting event consumer...")
 
+        assert self.consumer is not None, "Consumer must be initialized"
+
         try:
             async for message in self.consumer:
                 if not self._running:
@@ -180,6 +182,7 @@ class PipelineController:
         self._active_deployments[deployment_id] = data
 
         # Execute deployment
+        assert self.deployment_executor is not None, "Deployment executor must be initialized"
         try:
             await self.deployment_executor.create_deployment(data)
             await self._publish_status_update(
@@ -202,6 +205,7 @@ class PipelineController:
         new_replicas = data["new_replicas"]
         logger.info(f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas")
 
+        assert self.deployment_executor is not None, "Deployment executor must be initialized"
         try:
             await self.deployment_executor.scale_deployment(deployment_id, new_replicas)
             await self._publish_status_update(
@@ -221,6 +225,7 @@ class PipelineController:
         deployment_id = UUID(data["deployment_id"])
         logger.info(f"Handling deployment rollback: {deployment_id}")
 
+        assert self.deployment_executor is not None, "Deployment executor must be initialized"
         try:
             await self.deployment_executor.rollback_deployment(deployment_id)
             await self._publish_status_update(
@@ -239,6 +244,7 @@ class PipelineController:
         deployment_id = UUID(data["deployment_id"])
         logger.info(f"Handling deployment deletion: {deployment_id}")
 
+        assert self.deployment_executor is not None, "Deployment executor must be initialized"
         try:
             await self.deployment_executor.delete_deployment(deployment_id)
             # Remove from active deployments
@@ -299,6 +305,8 @@ class PipelineController:
             f"with {len(action_plan.decisions)} decisions"
         )
 
+        assert self.deployment_executor is not None, "Deployment executor must be initialized"
+
         for decision in action_plan.decisions:
             try:
                 verb = decision.verb.value
@@ -338,6 +346,8 @@ class PipelineController:
                 logger.debug(
                     f"Running health checks on {len(self._active_deployments)} deployments"
                 )
+
+                assert self.health_checker is not None, "Health checker must be initialized"
 
                 for deployment_id, deployment_data in list(self._active_deployments.items()):
                     try:
@@ -380,6 +390,7 @@ class PipelineController:
             },
         }
 
+        assert self.producer is not None, "Producer must be initialized"
         await self.producer.send(self.settings.kafka_topic_events, value=event)
 
     async def _publish_action_plan_status(
@@ -409,4 +420,5 @@ class PipelineController:
             },
         }
 
+        assert self.producer is not None, "Producer must be initialized"
         await self.producer.send(self.settings.kafka_topic_events, value=event)
