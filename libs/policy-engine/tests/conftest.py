@@ -80,14 +80,14 @@ def sample_action_plan():
 
 @pytest.fixture
 def violating_action_plan():
-    """Action plan that violates cost ceiling."""
+    """Action plan that violates cost ceiling only."""
     return ActionPlan(
         id=uuid4(),
         decisions=[
             Decision(
                 verb=DecisionVerb.SCALE,
                 target={"deployment_id": str(uuid4()), "cluster": "prod"},
-                params={"replicas": 20, "estimated_cost_per_hour": 150},  # Exceeds limit
+                params={"replicas": 5, "estimated_cost_per_hour": 150},  # Only cost exceeds
                 ttl=900,
             ),
         ],

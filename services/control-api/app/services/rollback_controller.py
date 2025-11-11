@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sentinel_k8s import HealthStatus
+from sentinel_k8s import HealthStatus  # type: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 
