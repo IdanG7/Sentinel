@@ -40,9 +40,7 @@ class PipelineController:
         self._running = False
 
         # Initialize components
-        self.policy_engine = PolicyEngine(
-            mode=EvaluationMode(settings.policy_engine_mode)
-        )
+        self.policy_engine = PolicyEngine(mode=EvaluationMode(settings.policy_engine_mode))
         self.cluster_manager: Optional[ClusterManager] = None
         self.consumer: Optional[AIOKafkaConsumer] = None
         self.producer: Optional[AIOKafkaProducer] = None
@@ -202,22 +200,16 @@ class PipelineController:
         """
         deployment_id = UUID(data["deployment_id"])
         new_replicas = data["new_replicas"]
-        logger.info(
-            f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas"
-        )
+        logger.info(f"Handling deployment scale: {deployment_id} -> {new_replicas} replicas")
 
         try:
-            await self.deployment_executor.scale_deployment(
-                deployment_id, new_replicas
-            )
+            await self.deployment_executor.scale_deployment(deployment_id, new_replicas)
             await self._publish_status_update(
                 deployment_id, "running", f"Scaled to {new_replicas} replicas"
             )
         except Exception as e:
             logger.error(f"Failed to scale deployment {deployment_id}: {e}")
-            await self._publish_status_update(
-                deployment_id, "failed", f"Scale failed: {str(e)}"
-            )
+            await self._publish_status_update(deployment_id, "failed", f"Scale failed: {str(e)}")
 
     async def _handle_deployment_rollback(self, data: dict[str, Any]) -> None:
         """
@@ -293,9 +285,7 @@ class PipelineController:
 
         except Exception as e:
             logger.error(f"Error handling action plan {plan_id}: {e}", exc_info=True)
-            await self._publish_action_plan_status(
-                plan_id, "failed", error=str(e)
-            )
+            await self._publish_action_plan_status(plan_id, "failed", error=str(e))
 
     async def _execute_action_plan(self, action_plan: ActionPlan) -> None:
         """
@@ -332,9 +322,7 @@ class PipelineController:
                     logger.warning(f"Unknown decision verb: {verb}")
 
             except Exception as e:
-                logger.error(
-                    f"Error executing decision {decision.verb}: {e}", exc_info=True
-                )
+                logger.error(f"Error executing decision {decision.verb}: {e}", exc_info=True)
                 # Continue with other decisions even if one fails
 
     async def _health_check_loop(self) -> None:
@@ -352,9 +340,7 @@ class PipelineController:
                     f"Running health checks on {len(self._active_deployments)} deployments"
                 )
 
-                for deployment_id, deployment_data in list(
-                    self._active_deployments.items()
-                ):
+                for deployment_id, deployment_data in list(self._active_deployments.items()):
                     try:
                         is_healthy = await self.health_checker.check_deployment_health(
                             deployment_id, deployment_data
@@ -376,9 +362,7 @@ class PipelineController:
         except Exception as e:
             logger.error(f"Error in health check loop: {e}", exc_info=True)
 
-    async def _publish_status_update(
-        self, deployment_id: UUID, status: str, message: str
-    ) -> None:
+    async def _publish_status_update(self, deployment_id: UUID, status: str, message: str) -> None:
         """
         Publish deployment status update to Kafka.
 
