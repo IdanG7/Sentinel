@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sentinel_k8s import DeploymentHealthChecker, HealthStatus
+from sentinel_k8s import HealthStatus
 
 logger = logging.getLogger(__name__)
 

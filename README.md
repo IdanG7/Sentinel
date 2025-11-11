@@ -2,7 +2,7 @@
 
 > **Autonomous AI Infrastructure Platform powered by InfraMind**
 
-[![Phase](https://img.shields.io/badge/Phase-2%20Complete-success?style=flat-square)](ROADMAP.md)
+[![Phase](https://img.shields.io/badge/Phase-3%20Complete-success?style=flat-square)](ROADMAP.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://golang.org/)
@@ -24,12 +24,20 @@ Observe → Predict → Act → Learn
 
 ## Key Features
 
+### 🚀 **Phase 3: Production-Ready Safety & Rollouts**
+- **Canary deployments** with progressive traffic shifting and health gates
+- **Shadow evaluation mode** - Test plans safely without execution
+- **Change freeze windows** - Timezone-aware deployment blocking (weekends, holidays)
+- **Rate limiting** - Sliding window algorithm with per-resource tracking
+- **Automated rollbacks** - Health monitoring with auto-trigger on failures
+- **Health scoring** - Multi-criteria deployment health (0.0-1.0)
+
+### 🏗️ **Core Platform**
 - **Multi-cluster orchestration** (cloud + on-prem + edge)
-- **Predictive autoscaling** guided by ML models
-- **Policy-driven automation** (SLA, SLO, cost, quota enforcement)
-- **Safety mechanisms** (canary deployments, rollbacks, rate limits)
+- **Predictive autoscaling** guided by ML models (InfraMind integration)
+- **Policy-driven automation** (SLA, SLO, cost, quota, freeze, rate limit enforcement)
 - **GPU-aware scheduling** with heterogeneous hardware support
-- **Comprehensive observability** (Prometheus, OpenTelemetry, Kafka events)
+- **Comprehensive observability** (Prometheus, Grafana, Kafka events)
 
 ## Architecture
 

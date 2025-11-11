@@ -210,11 +210,40 @@ jobs:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
           category: trivy-${{ matrix.service }}
 
+  # Test Policy Engine (Phase 3)
+  test-policy-engine:
+    name: Test Policy Engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install policy engine
+        run: |
+          pip install -e "libs/policy-engine[dev]"
+
+      - name: Run policy engine tests
+        working-directory: libs/policy-engine
+        run: |
+          pytest tests/ -v --cov=sentinel_policy --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: libs/policy-engine/coverage.xml
+          flags: policy-engine
+          name: codecov-policy-engine
+
   # Integration tests
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [build-images]
+    needs: [build-images, test-policy-engine]
     services:
       postgres:
         image: postgres:16-alpine
@@ -264,7 +293,7 @@ jobs:
   all-checks:
     name: All Checks Passed
     runs-on: ubuntu-latest
-    needs: [lint-python, lint-go, test-python, test-go, build-images, security-scan, integration-tests]
+    needs: [lint-python, lint-go, test-python, test-go, test-policy-engine, build-images, security-scan, integration-tests]
     steps:
       - name: All checks passed
         run: echo "All CI checks passed successfully!"
