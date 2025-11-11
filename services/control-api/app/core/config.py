@@ -45,9 +45,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # CORS Settings
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8080"]
-    )
+    cors_origins: list[str] = Field(default=["http://localhost:3000", "http://localhost:8080"])
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = Field(default=["*"])
     cors_allow_headers: list[str] = Field(default=["*"])

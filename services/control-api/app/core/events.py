@@ -108,8 +108,7 @@ class EventPublisher:
                 result[key] = self._serialize_data(value)
             elif isinstance(value, list):
                 result[key] = [
-                    self._serialize_data(item) if isinstance(item, dict) else item
-                    for item in value
+                    self._serialize_data(item) if isinstance(item, dict) else item for item in value
                 ]
             else:
                 result[key] = value

@@ -80,13 +80,15 @@ async def update_policy(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
 
     policy_data = policies_db[policy_id]
-    policy_data.update({
-        "name": policy.name,
-        "rules": [rule.model_dump() for rule in policy.rules],
-        "priority": policy.priority,
-        "enabled": policy.enabled,
-        "updated_at": datetime.utcnow(),
-    })
+    policy_data.update(
+        {
+            "name": policy.name,
+            "rules": [rule.model_dump() for rule in policy.rules],
+            "priority": policy.priority,
+            "enabled": policy.enabled,
+            "updated_at": datetime.utcnow(),
+        }
+    )
 
     return PolicyResponse(**policy_data)
 

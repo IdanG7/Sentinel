@@ -37,9 +37,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             Model instance or None
         """
-        result = await db.execute(
-            select(self.model).where(self.model.id == id)
-        )
+        result = await db.execute(select(self.model).where(self.model.id == id))
         return result.scalar_one_or_none()
 
     async def get_multi(
@@ -60,9 +58,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             List of model instances
         """
-        result = await db.execute(
-            select(self.model).offset(skip).limit(limit)
-        )
+        result = await db.execute(select(self.model).offset(skip).limit(limit))
         return list(result.scalars().all())
 
     async def create(

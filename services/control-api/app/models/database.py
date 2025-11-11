@@ -69,7 +69,9 @@ class Workload(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     # Relationships
-    deployments = relationship("Deployment", back_populates="workload", cascade="all, delete-orphan")
+    deployments = relationship(
+        "Deployment", back_populates="workload", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Workload(name={self.name}, type={self.type})>"

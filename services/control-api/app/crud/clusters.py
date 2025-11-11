@@ -41,9 +41,7 @@ class CRUDCluster(CRUDBase[Cluster, ClusterCreate, ClusterCreate]):
         Returns:
             Cluster or None
         """
-        result = await db.execute(
-            select(Cluster).where(Cluster.name == name)
-        )
+        result = await db.execute(select(Cluster).where(Cluster.name == name))
         return result.scalar_one_or_none()
 
 

@@ -82,18 +82,14 @@ class PlanExecutor:
             validation_result = await self._validate_plan(plan_data)
 
             if not validation_result["valid"]:
-                raise PlanExecutionError(
-                    f"Plan validation failed: {validation_result['reason']}"
-                )
+                raise PlanExecutionError(f"Plan validation failed: {validation_result['reason']}")
 
             # Step 2: Execute decisions
             decisions = plan_data.get("decisions", [])
             results = []
 
             for i, decision in enumerate(decisions):
-                logger.info(
-                    f"Executing decision {i+1}/{len(decisions)}: {decision['verb']}"
-                )
+                logger.info(f"Executing decision {i+1}/{len(decisions)}: {decision['verb']}")
 
                 try:
                     result = await self._execute_decision(decision)
@@ -113,9 +109,7 @@ class PlanExecutor:
                         )
 
                 except Exception as e:
-                    logger.error(
-                        f"Failed to execute decision {i+1}: {e}", exc_info=True
-                    )
+                    logger.error(f"Failed to execute decision {i+1}: {e}", exc_info=True)
 
                     # Publish failure event
                     if self.event_publisher:
@@ -131,9 +125,7 @@ class PlanExecutor:
                         )
 
                     # Stop execution on first failure
-                    raise PlanExecutionError(
-                        f"Decision {i+1} failed: {e}"
-                    ) from e
+                    raise PlanExecutionError(f"Decision {i+1} failed: {e}") from e
 
             # Step 3: Record execution
             end_time = datetime.utcnow()
@@ -169,9 +161,7 @@ class PlanExecutor:
                     },
                 )
 
-            logger.info(
-                f"✓ Plan {plan_id} executed successfully in {execution_duration:.2f}s"
-            )
+            logger.info(f"✓ Plan {plan_id} executed successfully in {execution_duration:.2f}s")
 
             return execution_result
 

@@ -60,7 +60,10 @@ async def create_deployment(
         verb="create",
         target={"type": "deployment", "id": str(db_deployment.id)},
         result="success",
-        metadata={"workload_id": str(deployment.workload_id), "cluster_id": str(deployment.cluster_id)},
+        metadata={
+            "workload_id": str(deployment.workload_id),
+            "cluster_id": str(deployment.cluster_id),
+        },
     )
 
     return DeploymentResponse(
