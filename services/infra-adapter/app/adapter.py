@@ -168,9 +168,7 @@ class InfraMindAdapter:
 
                     # Add event to telemetry batch
                     telemetry_point = {
-                        "timestamp": event.get(
-                            "timestamp", datetime.utcnow().isoformat()
-                        ),
+                        "timestamp": event.get("timestamp", datetime.utcnow().isoformat()),
                         "type": "event",
                         "event_type": event_type,
                         "data": event.get("data", {}),

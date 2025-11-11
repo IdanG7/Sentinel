@@ -74,9 +74,7 @@ class TelemetryCollector:
                     data = response.json()
 
                     if data.get("status") != "success":
-                        logger.warning(
-                            f"Prometheus query unsuccessful for {metric_name}"
-                        )
+                        logger.warning(f"Prometheus query unsuccessful for {metric_name}")
                         continue
 
                     # Parse results
@@ -138,9 +136,7 @@ class TelemetryCollector:
                     )
 
                     if response.status_code != 200:
-                        logger.warning(
-                            f"Prometheus range query failed for {metric_name}"
-                        )
+                        logger.warning(f"Prometheus range query failed for {metric_name}")
                         continue
 
                     data = response.json()
@@ -160,9 +156,7 @@ class TelemetryCollector:
                                 continue
 
                             telemetry_point = {
-                                "timestamp": datetime.fromtimestamp(
-                                    timestamp
-                                ).isoformat(),
+                                "timestamp": datetime.fromtimestamp(timestamp).isoformat(),
                                 "type": "metric",
                                 "metric_name": metric_name,
                                 "value": float(value),
@@ -172,8 +166,6 @@ class TelemetryCollector:
                             telemetry_points.append(telemetry_point)
 
                 except Exception as e:
-                    logger.error(
-                        f"Error collecting range for {metric_name}: {e}", exc_info=True
-                    )
+                    logger.error(f"Error collecting range for {metric_name}: {e}", exc_info=True)
 
         return telemetry_points

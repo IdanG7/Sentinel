@@ -60,23 +60,15 @@ class InfraMindClient:
                     credentials = create_grpc_channel_credentials(mtls_config)
 
                     logger.info("Using mTLS for InfraMind connection")
-                    self.channel = grpc.aio.secure_channel(
-                        self.settings.inframind_url, credentials
-                    )
+                    self.channel = grpc.aio.secure_channel(self.settings.inframind_url, credentials)
                 except (ImportError, FileNotFoundError) as e:
                     # Fallback to basic TLS if mTLS certs not available
-                    logger.warning(
-                        f"mTLS not available ({e}), falling back to basic TLS"
-                    )
+                    logger.warning(f"mTLS not available ({e}), falling back to basic TLS")
                     with open(self.settings.inframind_tls_cert_path, "rb") as f:
                         credentials = grpc.ssl_channel_credentials(f.read())
-                    self.channel = grpc.aio.secure_channel(
-                        self.settings.inframind_url, credentials
-                    )
+                    self.channel = grpc.aio.secure_channel(self.settings.inframind_url, credentials)
             else:
-                logger.warning(
-                    "Insecure connection to InfraMind (not recommended for production)"
-                )
+                logger.warning("Insecure connection to InfraMind (not recommended for production)")
                 self.channel = grpc.aio.insecure_channel(self.settings.inframind_url)
 
             # Test connection with a simple health check
@@ -96,9 +88,7 @@ class InfraMindClient:
             self.connected = False
             logger.info("Disconnected from InfraMind")
 
-    async def stream_telemetry(
-        self, telemetry_iterator: AsyncIterator[TelemetryBatch]
-    ) -> Ack:
+    async def stream_telemetry(self, telemetry_iterator: AsyncIterator[TelemetryBatch]) -> Ack:
         """
         Stream telemetry batches to InfraMind.
 
@@ -131,9 +121,7 @@ class InfraMindClient:
                 # For now, just log
                 logger.debug(f"Sent batch {batch.batch_id}: {len(batch.points)} points")
 
-            logger.info(
-                f"✓ Streamed {batch_count} batches ({point_count} points) to InfraMind"
-            )
+            logger.info(f"✓ Streamed {batch_count} batches ({point_count} points) to InfraMind")
 
             return Ack(success=True, message=f"Received {point_count} telemetry points")
 
@@ -177,9 +165,7 @@ class InfraMindClient:
         )
 
         # Mock implementation - in production would use gRPC
-        logger.info(
-            f"Sending telemetry batch {batch.batch_id} with {len(points)} points"
-        )
+        logger.info(f"Sending telemetry batch {batch.batch_id} with {len(points)} points")
 
         # Simulate network delay
         await asyncio.sleep(0.1)
@@ -259,9 +245,7 @@ class InfraMindClient:
         if not self.connected:
             raise RuntimeError("Not connected to InfraMind")
 
-        logger.info(
-            f"Acknowledging plan {plan_id}: {'success' if success else 'failure'}"
-        )
+        logger.info(f"Acknowledging plan {plan_id}: {'success' if success else 'failure'}")
 
         try:
             # In production, send via gRPC:
