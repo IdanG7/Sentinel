@@ -294,12 +294,14 @@ class InfraMindAdapter:
                     "target": dict(d.target),
                     "params": dict(d.params),
                     "ttl": d.ttl,
-                    "safety": {
-                        "rate_limit": d.safety.rate_limit,
-                        "window": d.safety.window,
-                    }
-                    if d.safety
-                    else None,
+                    "safety": (
+                        {
+                            "rate_limit": d.safety.rate_limit,
+                            "window": d.safety.window,
+                        }
+                        if d.safety
+                        else None
+                    ),
                 }
                 for d in action_plan.decisions
             ],
@@ -311,9 +313,11 @@ class InfraMindAdapter:
             response = await self.http_client.post(
                 "/action-plans",
                 json=plan_dict,
-                headers={"Authorization": f"Bearer {self.settings.control_api_token}"}
-                if self.settings.control_api_token
-                else {},
+                headers=(
+                    {"Authorization": f"Bearer {self.settings.control_api_token}"}
+                    if self.settings.control_api_token
+                    else {}
+                ),
             )
 
             response.raise_for_status()

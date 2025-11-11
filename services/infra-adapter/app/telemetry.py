@@ -30,21 +30,18 @@ class TelemetryCollector:
         # Define metrics to collect
         self.metrics_queries = {
             # Node metrics
-            "node_cpu_usage": 'avg(sentinel_node_cpu_percent) by (node)',
+            "node_cpu_usage": "avg(sentinel_node_cpu_percent) by (node)",
             "node_memory_usage": 'avg(sentinel_node_memory_bytes{type="used"}) by (node)',
-            "node_gpu_utilization": 'avg(sentinel_node_gpu_utilization_percent) by (node, gpu_index)',
-
+            "node_gpu_utilization": "avg(sentinel_node_gpu_utilization_percent) by (node, gpu_index)",
             # Workload metrics
-            "workload_latency_p99": 'histogram_quantile(0.99, sum(rate(sentinel_workload_inference_latency_ms_bucket[5m])) by (workload, le))',
+            "workload_latency_p99": "histogram_quantile(0.99, sum(rate(sentinel_workload_inference_latency_ms_bucket[5m])) by (workload, le))",
             "workload_success_rate": 'sum(rate(sentinel_workload_requests_total{status="success"}[5m])) by (workload) / sum(rate(sentinel_workload_requests_total[5m])) by (workload)',
-            "workload_queue_depth": 'sentinel_workload_queue_depth',
-
+            "workload_queue_depth": "sentinel_workload_queue_depth",
             # Deployment metrics
             "deployment_replicas_available": 'kube_deployment_status_replicas_available{app="sentinel"}',
             "deployment_replicas_desired": 'kube_deployment_spec_replicas{app="sentinel"}',
-
             # System metrics
-            "http_request_rate": 'sum(rate(http_requests_total[5m])) by (endpoint)',
+            "http_request_rate": "sum(rate(http_requests_total[5m])) by (endpoint)",
             "http_error_rate": 'sum(rate(http_requests_total{status=~"5.."}[5m])) by (endpoint)',
         }
 
@@ -69,7 +66,9 @@ class TelemetryCollector:
                     )
 
                     if response.status_code != 200:
-                        logger.warning(f"Prometheus query failed for {metric_name}: {response.status_code}")
+                        logger.warning(
+                            f"Prometheus query failed for {metric_name}: {response.status_code}"
+                        )
                         continue
 
                     data = response.json()
