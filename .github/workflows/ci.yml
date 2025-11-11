@@ -200,7 +200,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
@@ -239,9 +239,9 @@ jobs:
           pip install -e libs/k8s-driver
           pip install -e libs/policy-engine
 
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
-          pip install pytest pytest-asyncio httpx aiosqlite
+          pip install -r tests/requirements.txt
 
       - name: Run integration tests
         working-directory: tests/integration
