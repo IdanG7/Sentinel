@@ -42,6 +42,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     logger.info(f"   Kafka: {settings.kafka_bootstrap_servers}")
 
+    # Initialize mTLS
+    from app.core.mtls import init_mtls
+
+    mtls = init_mtls()
+    if mtls.enabled:
+        logger.info("   mTLS: Enabled")
+    else:
+        logger.warning("   mTLS: DISABLED (not secure for production)")
+
     # Initialize database
     from app.core.database import init_db
 
@@ -126,6 +135,11 @@ async def ready() -> dict[str, str]:
 
 if __name__ == "__main__":
     import uvicorn
+    from app.core.mtls import init_mtls
+
+    # Initialize mTLS configuration
+    mtls = init_mtls()
+    ssl_config = mtls.get_uvicorn_ssl_config()
 
     uvicorn.run(
         "app.main:app",
@@ -133,4 +147,5 @@ if __name__ == "__main__":
         port=settings.port,
         reload=settings.debug,
         log_level=settings.log_level.lower(),
+        **ssl_config,  # Add SSL configuration if mTLS is enabled
     )

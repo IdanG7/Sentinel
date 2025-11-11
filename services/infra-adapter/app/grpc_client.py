@@ -42,18 +42,36 @@ class InfraMindClient:
         self.connected = False
 
     async def connect(self) -> None:
-        """Establish gRPC connection to InfraMind."""
+        """Establish gRPC connection to InfraMind with mTLS."""
         if self.connected:
             logger.warning("Already connected to InfraMind")
             return
 
         try:
             if self.settings.inframind_tls_enabled:
-                # Load TLS credentials
-                with open(self.settings.inframind_tls_cert_path, "rb") as f:
-                    credentials = grpc.ssl_channel_credentials(f.read())
-                self.channel = grpc.aio.secure_channel(self.settings.inframind_url, credentials)
+                # Load mTLS credentials (client certificate + server CA)
+                try:
+                    from sentinel_common.mtls import mtls_config_from_env, create_grpc_channel_credentials
+
+                    mtls_config = mtls_config_from_env(verify_server=True)
+                    credentials = create_grpc_channel_credentials(mtls_config)
+
+                    logger.info("Using mTLS for InfraMind connection")
+                    self.channel = grpc.aio.secure_channel(
+                        self.settings.inframind_url,
+                        credentials
+                    )
+                except (ImportError, FileNotFoundError) as e:
+                    # Fallback to basic TLS if mTLS certs not available
+                    logger.warning(f"mTLS not available ({e}), falling back to basic TLS")
+                    with open(self.settings.inframind_tls_cert_path, "rb") as f:
+                        credentials = grpc.ssl_channel_credentials(f.read())
+                    self.channel = grpc.aio.secure_channel(
+                        self.settings.inframind_url,
+                        credentials
+                    )
             else:
+                logger.warning("Insecure connection to InfraMind (not recommended for production)")
                 self.channel = grpc.aio.insecure_channel(self.settings.inframind_url)
 
             # Test connection with a simple health check

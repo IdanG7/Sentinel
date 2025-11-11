@@ -6,6 +6,17 @@ global:
   imagePullPolicy: IfNotPresent
   storageClass: ""
 
+  # mTLS Configuration
+  mtls:
+    enabled: true
+    # Certificate issuer (cert-manager ClusterIssuer)
+    issuer: sentinel-ca-issuer
+    # Certificate duration and renewal
+    certificateDuration: 2160h  # 90 days
+    certificateRenewBefore: 360h  # 15 days
+    # Mount path for certificates in pods
+    certPath: /etc/sentinel/certs
+
 # Control API configuration
 controlApi:
   enabled: true
@@ -55,6 +66,15 @@ controlApi:
       value: http://vault:8200
     - name: LOG_LEVEL
       value: info
+    # mTLS configuration
+    - name: MTLS_ENABLED
+      value: "true"
+    - name: MTLS_CERT_PATH
+      value: /etc/sentinel/certs/tls.crt
+    - name: MTLS_KEY_PATH
+      value: /etc/sentinel/certs/tls.key
+    - name: MTLS_CA_CERT_PATH
+      value: /etc/sentinel/certs/ca.crt
 
   podAnnotations:
     prometheus.io/scrape: "true"
@@ -148,6 +168,17 @@ infraAdapter:
       value: inframind:50051
     - name: LOG_LEVEL
       value: info
+    # mTLS configuration
+    - name: MTLS_ENABLED
+      value: "true"
+    - name: MTLS_CERT_PATH
+      value: /etc/sentinel/certs/tls.crt
+    - name: MTLS_KEY_PATH
+      value: /etc/sentinel/certs/tls.key
+    - name: MTLS_CA_CERT_PATH
+      value: /etc/sentinel/certs/ca.crt
+    - name: INFRAMIND_TLS_ENABLED
+      value: "true"
 
   podAnnotations:
     prometheus.io/scrape: "true"

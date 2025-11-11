@@ -1,0 +1,247 @@
+---
+# mTLS Certificate Configuration for Sentinel Services
+# Defines certificates for all inter-service communication
+#
+# Installation:
+#   kubectl apply -f mtls-config.yaml
+#
+# Verify:
+#   kubectl get certificates -n sentinel-system
+#   kubectl describe certificate control-api-tls -n sentinel-system
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sentinel-system
+
+---
+# Control API Server Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: control-api-tls
+  namespace: sentinel-system
+spec:
+  secretName: control-api-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h # Renew 15 days before expiry
+  subject:
+    organizations:
+      - sentinel
+  commonName: control-api.sentinel-system.svc.cluster.local
+  dnsNames:
+    - control-api
+    - control-api.sentinel-system
+    - control-api.sentinel-system.svc
+    - control-api.sentinel-system.svc.cluster.local
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  usages:
+    - server auth
+    - client auth
+    - digital signature
+    - key encipherment
+  issuerRef:
+    name: sentinel-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# Pipeline Controller Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pipeline-controller-tls
+  namespace: sentinel-system
+spec:
+  secretName: pipeline-controller-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h # Renew 15 days before expiry
+  subject:
+    organizations:
+      - sentinel
+  commonName: pipeline-controller.sentinel-system.svc.cluster.local
+  dnsNames:
+    - pipeline-controller
+    - pipeline-controller.sentinel-system
+    - pipeline-controller.sentinel-system.svc
+    - pipeline-controller.sentinel-system.svc.cluster.local
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  usages:
+    - server auth
+    - client auth
+    - digital signature
+    - key encipherment
+  issuerRef:
+    name: sentinel-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# InfraMind Adapter Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: infra-adapter-tls
+  namespace: sentinel-system
+spec:
+  secretName: infra-adapter-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h # Renew 15 days before expiry
+  subject:
+    organizations:
+      - sentinel
+  commonName: infra-adapter.sentinel-system.svc.cluster.local
+  dnsNames:
+    - infra-adapter
+    - infra-adapter.sentinel-system
+    - infra-adapter.sentinel-system.svc
+    - infra-adapter.sentinel-system.svc.cluster.local
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  usages:
+    - server auth
+    - client auth
+    - digital signature
+    - key encipherment
+  issuerRef:
+    name: sentinel-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# Node Agent Certificate Template
+# Deploy one per agent with unique name
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: node-agent-tls
+  namespace: sentinel-system
+spec:
+  secretName: node-agent-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h # Renew 15 days before expiry
+  subject:
+    organizations:
+      - sentinel
+  commonName: node-agent.sentinel-system.svc.cluster.local
+  dnsNames:
+    - node-agent
+    - node-agent.sentinel-system
+    - node-agent.sentinel-system.svc
+    - node-agent.sentinel-system.svc.cluster.local
+    - "*.sentinel-system.svc.cluster.local"
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  usages:
+    - client auth
+    - digital signature
+    - key encipherment
+  issuerRef:
+    name: sentinel-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# ConfigMap with CA certificate for clients
+# Mount this in pods that need to verify server certificates
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-ca-bundle
+  namespace: sentinel-system
+data:
+  ca.crt: |
+    # This will be populated by cert-manager
+    # Or manually copy from: kubectl get secret sentinel-ca-secret -n cert-manager -o jsonpath='{.data.ca\.crt}' | base64 -d
+
+---
+# ServiceAccount for services to access certificates
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sentinel-service
+  namespace: sentinel-system
+
+---
+# Role to read certificates
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sentinel-cert-reader
+  namespace: sentinel-system
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames:
+      - control-api-tls
+      - pipeline-controller-tls
+      - infra-adapter-tls
+      - node-agent-tls
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames:
+      - sentinel-ca-bundle
+    verbs: ["get", "list"]
+
+---
+# Bind role to service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sentinel-cert-reader-binding
+  namespace: sentinel-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sentinel-cert-reader
+subjects:
+  - kind: ServiceAccount
+    name: sentinel-service
+    namespace: sentinel-system
+
+---
+# Optional: Certificate metrics exporter
+# Exposes certificate expiration metrics to Prometheus
+apiVersion: v1
+kind: Service
+metadata:
+  name: cert-manager-metrics
+  namespace: cert-manager
+  labels:
+    app: cert-manager
+spec:
+  ports:
+    - name: metrics
+      port: 9402
+      protocol: TCP
+      targetPort: 9402
+  selector:
+    app: cert-manager
+
+---
+# ServiceMonitor for Prometheus Operator
+# Scrapes certificate metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  selector:
+    matchLabels:
+      app: cert-manager
+  endpoints:
+    - port: metrics
+      interval: 60s
+      scrapeTimeout: 30s

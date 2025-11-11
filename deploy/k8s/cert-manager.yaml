@@ -1,0 +1,122 @@
+---
+# cert-manager Installation and Configuration
+# Manages TLS certificates for Sentinel services with automatic rotation
+#
+# Installation:
+#   kubectl apply -f cert-manager.yaml
+#
+# Verify:
+#   kubectl get pods -n cert-manager
+#   kubectl get certificates -n sentinel-system
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+
+---
+# Install cert-manager using Helm chart (recommended)
+# Alternative: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+#
+# For production, use Helm:
+#   helm repo add jetstack https://charts.jetstack.io
+#   helm repo update
+#   helm install cert-manager jetstack/cert-manager \
+#     --namespace cert-manager \
+#     --version v1.13.0 \
+#     --set installCRDs=true
+
+---
+# Self-signed ClusterIssuer for development/testing
+# For production, use Let's Encrypt, Vault PKI, or your enterprise CA
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+
+---
+# Root CA Certificate (self-signed)
+# All service certificates will be signed by this CA
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sentinel-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: sentinel-ca
+  secretName: sentinel-ca-secret
+  duration: 87600h # 10 years
+  renewBefore: 8760h # Renew 1 year before expiry
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 4096
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# CA Issuer using the root CA
+# This issuer will sign all service certificates
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: sentinel-ca-issuer
+spec:
+  ca:
+    secretName: sentinel-ca-secret
+
+---
+# Optional: Vault PKI Issuer (for production)
+# Uncomment and configure if using HashiCorp Vault
+# apiVersion: cert-manager.io/v1
+# kind: ClusterIssuer
+# metadata:
+#   name: vault-issuer
+# spec:
+#   vault:
+#     server: https://vault.example.com
+#     path: pki/sign/sentinel
+#     auth:
+#       kubernetes:
+#         mountPath: /v1/auth/kubernetes
+#         role: cert-manager
+#         secretRef:
+#           name: cert-manager-vault-token
+#           key: token
+
+---
+# Certificate rotation monitoring
+# Alert if certificates are expiring soon
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cert-manager-alerts
+  namespace: cert-manager
+data:
+  alerts.yml: |
+    groups:
+    - name: cert-manager
+      interval: 1m
+      rules:
+      - alert: CertificateExpiringSoon
+        expr: certmanager_certificate_expiration_timestamp_seconds - time() < 604800
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate {{ $labels.name }} expiring soon"
+          description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} expires in less than 7 days"
+
+      - alert: CertificateRenewalFailed
+        expr: certmanager_certificate_ready_status{condition="False"} == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Certificate renewal failed for {{ $labels.name }}"
+          description: "Certificate {{ $labels.name }} in namespace {{ $labels.namespace }} failed to renew"
