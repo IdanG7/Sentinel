@@ -199,8 +199,8 @@ class TestDeploymentFlow:
     @pytest.mark.asyncio
     async def test_database_workflow(self, test_db):
         """Test database operations workflow."""
-        from services.control_api.app.crud import workload as workload_crud
-        from services.control_api.app.models.schemas import WorkloadCreate
+        from app.crud import workload as workload_crud
+        from app.models.schemas import WorkloadCreate
 
         # Create a workload
         workload_data = WorkloadCreate(
