@@ -6,12 +6,11 @@ WORKDIR /build
 # Install build dependencies
 RUN apk add --no-cache git make
 
-# Copy go mod files
-COPY go.mod ./
-RUN go mod download
-
 # Copy source code
 COPY . .
+
+# Generate go.sum and download dependencies
+RUN go mod tidy
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
