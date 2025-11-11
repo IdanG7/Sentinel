@@ -1,14 +1,12 @@
 """Tests for InfraMind gRPC client."""
 
 import asyncio
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.config import Settings
 from app.grpc_client import InfraMindClient
-from app.proto import ActionPlan, Decision, TelemetryBatch, TelemetryPoint
 
 
 class TestInfraMindClient:

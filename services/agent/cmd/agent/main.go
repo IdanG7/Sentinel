@@ -43,7 +43,7 @@ func main() {
 	}
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(_ *cobra.Command, _ []string) error {
 	// Load configuration
 	cfg, err := config.Load(cfgFile)
 	if err != nil {
@@ -56,7 +56,8 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 	defer func() {
-		_ = logger.Sync() // Ignore sync errors on shutdown
+		//nolint:errcheck // best-effort sync on shutdown; nothing actionable on error
+		logger.Sync()
 	}()
 
 	logger.Info("starting Sentinel Agent",

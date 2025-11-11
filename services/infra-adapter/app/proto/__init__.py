@@ -5,7 +5,6 @@ For production, generate proper stubs using: make generate-proto
 """
 
 from dataclasses import dataclass, field
-from typing import Any
 
 __all__ = [
     "TelemetryPoint",

@@ -27,7 +27,7 @@ class Application:
             settings: Application settings
         """
         self.settings = settings
-        self.adapter: Optional[InfraMindAdapter] = None
+        self.adapter: InfraMindAdapter | None = None
         self._shutdown = False
 
     async def start(self) -> None:

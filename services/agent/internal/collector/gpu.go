@@ -103,7 +103,7 @@ func (c *GPUCollector) Name() string {
 }
 
 // Collect gathers GPU metrics
-func (c *GPUCollector) Collect(ctx context.Context) error {
+func (c *GPUCollector) Collect(_ context.Context) error {
 	if !c.enabled {
 		return nil
 	}

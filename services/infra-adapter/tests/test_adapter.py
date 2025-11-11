@@ -1,7 +1,8 @@
 """Tests for infra-adapter."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.config import Settings
 
@@ -85,8 +86,8 @@ class TestInfraMindAdapter:
     @pytest.mark.asyncio
     async def test_send_telemetry_batch(self, settings):
         """Test sending telemetry batch to InfraMind."""
-        from datetime import datetime
         from app.grpc_client import InfraMindClient
+        from datetime import datetime
 
         client = InfraMindClient(settings)
         client.connected = True

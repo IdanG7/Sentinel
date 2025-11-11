@@ -41,7 +41,7 @@ func (s *Server) Start(ctx context.Context) error {
 	))
 
 	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(`{"status":"healthy"}`)); err != nil {
 			s.logger.Error("failed to write health response", zap.Error(err))
@@ -49,7 +49,7 @@ func (s *Server) Start(ctx context.Context) error {
 	})
 
 	// Readiness endpoint
-	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(`{"status":"ready"}`)); err != nil {
 			s.logger.Error("failed to write ready response", zap.Error(err))

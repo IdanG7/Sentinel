@@ -145,7 +145,7 @@ func (c *SystemCollector) Name() string {
 }
 
 // Collect gathers system metrics
-func (c *SystemCollector) Collect(ctx context.Context) error {
+func (c *SystemCollector) Collect(_ context.Context) error {
 	// Collect CPU metrics
 	if err := c.collectCPU(); err != nil {
 		c.logger.Warn("failed to collect CPU metrics", zap.Error(err))

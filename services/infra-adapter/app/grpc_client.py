@@ -3,8 +3,9 @@
 import asyncio
 import logging
 import uuid
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import Any, AsyncIterator, Optional
+from typing import Any
 
 import grpc
 
@@ -39,7 +40,7 @@ class InfraMindClient:
             settings: Application settings
         """
         self.settings = settings
-        self.channel: Optional[grpc.aio.Channel] = None
+        self.channel: grpc.aio.Channel | None = None
         self.connected = False
 
     async def connect(self) -> None:
@@ -184,8 +185,6 @@ class InfraMindClient:
         if not self.connected:
             raise RuntimeError("Not connected to InfraMind")
 
-        request = ActionPlanRequest(cluster_id=cluster_id, filters=filters or [])
-
         logger.info(f"Streaming action plans for cluster {cluster_id}...")
 
         try:
@@ -231,14 +230,6 @@ class InfraMindClient:
         """
         if not self.connected:
             raise RuntimeError("Not connected to InfraMind")
-
-        ack = PlanAck(
-            plan_id=plan_id,
-            success=success,
-            message=message,
-            executed_at=int(datetime.utcnow().timestamp() * 1000),
-            metrics=metrics or {},
-        )
 
         logger.info(f"Acknowledging plan {plan_id}: {'success' if success else 'failure'}")
 

@@ -3,10 +3,8 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Optional
+from datetime import datetime
 
-import grpc
 import httpx
 from aiokafka import AIOKafkaConsumer
 
@@ -41,8 +39,8 @@ class InfraMindAdapter:
         # Initialize components
         self.telemetry_collector = TelemetryCollector(settings)
         self.grpc_client = InfraMindClient(settings)
-        self.consumer: Optional[AIOKafkaConsumer] = None
-        self.http_client: Optional[httpx.AsyncClient] = None
+        self.consumer: AIOKafkaConsumer | None = None
+        self.http_client: httpx.AsyncClient | None = None
 
         # Batching state
         self._telemetry_batch: list[dict[str, Any]] = []
