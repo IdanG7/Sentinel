@@ -1,5 +1,5 @@
 # Sentinel InfraMind Adapter - Dockerfile
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml .
+COPY app/ ./app/
 RUN pip install --no-cache-dir build && \
     python -m build --wheel && \
     pip wheel --no-cache-dir --wheel-dir=/build/wheels -e .
