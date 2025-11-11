@@ -76,7 +76,7 @@ jobs:
         with:
           version: v1.64.8
           working-directory: services/agent
-          args: --out-format=colored-line-number --path-prefix=services/agent --timeout=5m
+          args: --out-format=colored-line-number --path-prefix=services/agent --timeout=5m --enable=errcheck,govet,gosimple,staticcheck,ineffassign,gocritic,revive
 
   # Test Python services
   test-python:
