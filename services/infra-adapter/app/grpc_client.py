@@ -187,6 +187,10 @@ class InfraMindClient:
             This is a mock implementation for Phase 2 development.
             In production, this would use proper gRPC streaming.
         """
+        if False:
+            # This yield is never executed but makes this function an async generator
+            yield  # type: ignore[misc,unreachable]
+
         if not self.connected:
             raise RuntimeError("Not connected to InfraMind")
 

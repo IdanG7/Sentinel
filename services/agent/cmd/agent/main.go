@@ -122,10 +122,18 @@ func run(cmd *cobra.Command, args []string) error {
 		case sig := <-sigCh:
 			logger.Info("received shutdown signal", zap.String("signal", sig.String()))
 			cancel()
+			// Shutdown metrics server
+			if err := metricsServer.Shutdown(); err != nil {
+				logger.Error("failed to shutdown metrics server", zap.Error(err))
+			}
 			return nil
 
 		case <-ctx.Done():
 			logger.Info("shutting down agent")
+			// Shutdown metrics server
+			if err := metricsServer.Shutdown(); err != nil {
+				logger.Error("failed to shutdown metrics server", zap.Error(err))
+			}
 			return nil
 		}
 	}

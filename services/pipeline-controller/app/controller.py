@@ -207,7 +207,9 @@ class PipelineController:
         )
 
         try:
-            await self.deployment_executor.scale_deployment(deployment_id, new_replicas)
+            await self.deployment_executor.scale_deployment(
+                deployment_id, new_replicas
+            )
             await self._publish_status_update(
                 deployment_id, "running", f"Scaled to {new_replicas} replicas"
             )
