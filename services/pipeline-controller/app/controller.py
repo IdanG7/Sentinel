@@ -8,7 +8,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from sentinel_k8s import ClusterConnection, ClusterManager, DeploymentManager
+from sentinel_k8s import ClusterManager
 from sentinel_policy import ActionPlan, EvaluationMode, PolicyEngine
 
 from .config import Settings
@@ -41,11 +41,11 @@ class PipelineController:
 
         # Initialize components
         self.policy_engine = PolicyEngine(mode=EvaluationMode(settings.policy_engine_mode))
-        self.cluster_manager: Optional[ClusterManager] = None
-        self.consumer: Optional[AIOKafkaConsumer] = None
-        self.producer: Optional[AIOKafkaProducer] = None
-        self.deployment_executor: Optional[DeploymentExecutor] = None
-        self.health_checker: Optional[HealthChecker] = None
+        self.cluster_manager: ClusterManager | None = None
+        self.consumer: AIOKafkaConsumer | None = None
+        self.producer: AIOKafkaProducer | None = None
+        self.deployment_executor: DeploymentExecutor | None = None
+        self.health_checker: HealthChecker | None = None
 
         # Track active deployments
         self._active_deployments: dict[UUID, dict[str, Any]] = {}
@@ -303,7 +303,6 @@ class PipelineController:
             try:
                 verb = decision.verb.value
                 target = decision.target
-                params = decision.params
 
                 logger.info(f"Executing decision: {verb} on {target}")
 
@@ -387,8 +386,8 @@ class PipelineController:
         self,
         plan_id: UUID,
         status: str,
-        violations: Optional[list[dict]] = None,
-        error: Optional[str] = None,
+        violations: list[dict] | None = None,
+        error: str | None = None,
     ) -> None:
         """
         Publish action plan status update to Kafka.

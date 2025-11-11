@@ -1,7 +1,6 @@
 """Tests for pipeline controller."""
 
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
 
 
 class TestPipelineController:

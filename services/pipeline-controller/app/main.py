@@ -27,7 +27,7 @@ class Application:
             settings: Application settings
         """
         self.settings = settings
-        self.controller: Optional[PipelineController] = None
+        self.controller: PipelineController | None = None
         self._shutdown = False
 
     async def start(self) -> None:
