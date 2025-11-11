@@ -98,7 +98,7 @@ class EventPublisher:
 
         Handles UUIDs, datetimes, and other non-JSON types.
         """
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, UUID):
                 result[key] = str(value)

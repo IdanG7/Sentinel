@@ -1,6 +1,7 @@
 """Sentinel Control API - Main application entry point."""
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -30,7 +31,7 @@ http_request_duration_seconds = Histogram(
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown events."""
     # Startup
     logger.info("Starting Sentinel Control API...")
@@ -95,7 +96,7 @@ app.mount("/metrics", metrics_app)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     """Root endpoint."""
     return {
         "service": "sentinel-control-api",
@@ -117,7 +118,7 @@ async def health() -> HealthResponse:
 
 
 @app.get("/ready")
-async def ready():
+async def ready() -> dict[str, str]:
     """Readiness probe endpoint."""
     # TODO: Check database, Vault, Kafka connections
     return {"status": "ready"}
