@@ -81,6 +81,10 @@ disallow_untyped_defs = true
 module = "aiokafka.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "sentinel_common.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --cov=app --cov-report=term-missing"
