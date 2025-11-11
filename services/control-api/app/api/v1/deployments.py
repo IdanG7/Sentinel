@@ -50,7 +50,7 @@ async def create_deployment(
     # Publish events to Kafka
     event_publisher = get_event_publisher()
     await event_publisher.publish_deployment_event(
-        deployment_id=db_deployment.id,
+        deployment_id=db_deployment.id,  # type: ignore[arg-type]
         event_type="deployment.created",
         data=deployment_data,
     )

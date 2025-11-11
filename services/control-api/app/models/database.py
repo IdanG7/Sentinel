@@ -148,7 +148,7 @@ class AuditLog(Base):
     target = Column(JSON, nullable=False)
     result = Column(String(50), nullable=False)
     reason = Column(Text)
-    metadata = Column(JSON)
+    event_metadata = Column(JSON)
 
     def __repr__(self):
         return f"<AuditLog(actor={self.actor}, verb={self.verb}, result={self.result})>"

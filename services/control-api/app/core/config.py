@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, PostgresDsn, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     workers: int = 4
 
     # Database Settings
-    database_url: PostgresDsn = Field(
+    database_url: str = Field(
         default="postgresql://sentinel:sentinel@localhost:5432/sentinel"
     )
     database_pool_size: int = 20
@@ -85,9 +85,7 @@ class Settings(BaseSettings):
     @property
     def database_url_str(self) -> str:
         """Get database URL as string."""
-        if isinstance(self.database_url, str):
-            return self.database_url
-        return str(self.database_url)
+        return self.database_url
 
 
 @lru_cache
