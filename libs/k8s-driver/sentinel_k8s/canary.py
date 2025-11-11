@@ -5,15 +5,11 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any
 from uuid import UUID, uuid4
-
-from kubernetes.client import V1Deployment, V1ObjectMeta
-from kubernetes.client.exceptions import ApiException
 
 from .cluster import ClusterConnection
 from .deployments import DeploymentManager
-from .health import DeploymentHealthChecker, HealthStatus
+from .health import DeploymentHealthChecker
 from .models import DeploymentSpec
 
 logger = logging.getLogger(__name__)

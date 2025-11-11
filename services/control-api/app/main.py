@@ -135,6 +135,7 @@ async def ready() -> dict[str, str]:
 
 if __name__ == "__main__":
     import uvicorn
+
     from app.core.mtls import init_mtls
 
     # Initialize mTLS configuration

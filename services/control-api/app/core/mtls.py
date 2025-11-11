@@ -5,9 +5,8 @@ Provides HTTPS server with mutual TLS authentication.
 
 import logging
 import os
-from pathlib import Path
 
-from sentinel_common.mtls import MTLSConfig, create_ssl_context, mtls_config_from_env
+from sentinel_common.mtls import create_ssl_context, mtls_config_from_env
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +85,9 @@ class ControlAPIMTLS:
             "ssl_keyfile": str(self.config.key_path),
             "ssl_certfile": str(self.config.cert_path),
             "ssl_ca_certs": str(self.config.ca_cert_path),
-            "ssl_cert_reqs": 2 if self.config.verify_client else 0,  # CERT_REQUIRED or CERT_NONE
+            "ssl_cert_reqs": (
+                2 if self.config.verify_client else 0
+            ),  # CERT_REQUIRED or CERT_NONE
         }
 
 

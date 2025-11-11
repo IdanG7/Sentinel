@@ -103,7 +103,9 @@ def create_ssl_context(
         Configured SSL context
     """
     # Use TLS 1.3 with strong ciphers
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER if server_side else ssl.PROTOCOL_TLS_CLIENT)
+    context = ssl.SSLContext(
+        ssl.PROTOCOL_TLS_SERVER if server_side else ssl.PROTOCOL_TLS_CLIENT
+    )
     context.minimum_version = ssl.TLSVersion.TLSv1_3
 
     # Load certificate chain and private key
@@ -197,9 +199,7 @@ def create_grpc_channel_credentials(mtls_config: MTLSConfig) -> ChannelCredentia
     return channel_credentials
 
 
-def create_secure_grpc_server(
-    mtls_config: MTLSConfig, max_workers: int = 10
-) -> Any:
+def create_secure_grpc_server(mtls_config: MTLSConfig, max_workers: int = 10) -> Any:
     """
     Create gRPC server with mTLS enabled.
 
@@ -280,7 +280,8 @@ def mtls_config_from_env(
     return MTLSConfig(
         cert_path=cert_path or os.getenv("MTLS_CERT_PATH", DEFAULT_CERT_PATH),
         key_path=key_path or os.getenv("MTLS_KEY_PATH", DEFAULT_KEY_PATH),
-        ca_cert_path=ca_cert_path or os.getenv("MTLS_CA_CERT_PATH", DEFAULT_CA_CERT_PATH),
+        ca_cert_path=ca_cert_path
+        or os.getenv("MTLS_CA_CERT_PATH", DEFAULT_CA_CERT_PATH),
         verify_client=verify_client,
         verify_server=verify_server,
     )
