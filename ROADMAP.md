@@ -201,27 +201,270 @@ This roadmap outlines the planned development phases for Sentinel.
 
 ---
 
-## Future Phases (Post-MVP)
+## Phase 5: Intelligent Agent Orchestration (PatchBot Integration) (Weeks 11-13)
 
-### Phase 5: Multi-Tenancy & Federation
+**Goal:** Transform Sentinel from an orchestration platform into an AI-driven agent controller that manages autonomous remediation modules, starting with PatchBot for automatic failure resolution.
+
+**Objective:** Enable Sentinel to detect recurring CI/CD or system failures and invoke specialized AI agents (starting with PatchBot) to fix or suggest resolutions automatically, creating a self-healing development and operations pipeline.
+
+### Agent Controller Service
+- **Agent Registry:** Catalog of available autonomous agents with capabilities, versions, and health status
+- **Agent Lifecycle Management:** Start, stop, pause, resume, upgrade agents
+- **Sandboxing & Isolation:** Secure execution environments with resource limits (CPU, memory, network)
+- **Agent Scheduling:** Queue-based task distribution with priority and rate limiting
+- **Agent Monitoring:** Real-time metrics, logs aggregation, and failure detection
+- **Agent API Gateway:** Unified interface for agent invocation and result retrieval
+
+### PatchBot Integration Pipeline
+- **Logs Ingestion Layer:**
+  - Consume CI/CD failure logs from GitHub Actions, GitLab CI, Jenkins
+  - Parse and normalize log formats into structured failure events
+  - Extract key signals: error messages, stack traces, failed commands, environment context
+
+- **Failure Classification Engine:**
+  - ML-based categorization of failure types (linting, test failures, build errors, deployment issues)
+  - Pattern matching for known issue signatures
+  - Severity assessment and urgency scoring
+  - Deduplication of similar failures across time and repositories
+
+- **Fix Generation Workflow:**
+  - Invoke PatchBot agent with failure context and repository access
+  - PatchBot analyzes codebase, dependencies, and historical fixes
+  - Generate fix candidates with confidence scores
+  - Validate fixes in isolated sandbox environment
+
+- **Pull Request Creation:**
+  - Automated PR generation with fix, tests, and explanation
+  - Link to original failure logs and InfraMind analysis
+  - Flag for human review with confidence threshold
+  - Track PR lifecycle and merge outcomes
+
+### Telemetry Correlation Layer
+- **Bidirectional Data Flow:**
+  - **InfraMind → Agent Controller:** Failure predictions, anomaly alerts, optimization opportunities
+  - **Agent Outcomes → InfraMind:** Fix success rates, execution metrics, learning signals
+
+- **Correlation Engine:**
+  - Link InfraMind predictions to agent invocations
+  - Track prediction accuracy vs. actual agent outcomes
+  - Measure time-to-fix and success rates per failure type
+  - Feed agent performance back to InfraMind for model improvement
+
+- **Knowledge Graph:**
+  - Build graph of failures → fixes → outcomes
+  - Identify patterns and recurring issues
+  - Suggest proactive fixes before failures occur
+
+### Policy Extensions for Safe Auto-Remediation
+- **Auto-Remediation Policies:**
+  - **Rate Limits:** Max fixes per hour/day/week per repository
+  - **Confidence Thresholds:** Only auto-merge fixes above X% confidence
+  - **Blast Radius Control:** Limit simultaneous fixes across repositories
+  - **Change Freeze Windows:** No auto-fixes during critical periods
+
+- **Human-Review Gates:**
+  - Mandatory review for high-risk changes (security, production configs)
+  - Escalation paths for low-confidence fixes
+  - Approval workflows with timeout policies
+
+- **Rollback Plans:**
+  - Automatic PR revert if CI fails after merge
+  - Metrics-based rollback triggers (error rate spikes, performance degradation)
+  - Cooldown periods after rollback before retry
+
+- **Audit & Compliance:**
+  - Immutable audit trail of all agent actions
+  - Compliance checks for regulatory requirements
+  - Monthly reports on agent activity and outcomes
+
+### New Architecture Components
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     InfraMind (Brain)                         │
+│  Failure Prediction ←→ Outcome Learning ←→ Optimization      │
+└────────────────┬──────────────────────────┬──────────────────┘
+                 │                          │
+        ┌────────▼──────────┐      ┌────────▼─────────┐
+        │  Action Plans     │      │ Failure Alerts   │
+        └────────┬──────────┘      └────────┬─────────┘
+                 │                          │
+┌────────────────▼──────────────────────────▼─────────────────┐
+│                   Sentinel (Executor)                         │
+│                                                               │
+│  Control API ──→ Policy Engine ──→ Pipeline Controller       │
+│       │                                    │                  │
+│       └──────┐                    ┌────────┴────────┐        │
+│              │                    │                 │        │
+│         K8s Driver          Node Agents      Agent Controller│
+│                                              │                │
+│                                   ┌──────────▼──────────┐    │
+│                                   │   Agent Registry    │    │
+│                                   │   - PatchBot        │    │
+│                                   │   - LogAnalyzer     │    │
+│                                   │   - ConfigOptimizer │    │
+│                                   └──────────┬──────────┘    │
+│                                              │                │
+│                                   ┌──────────▼──────────┐    │
+│                                   │  Execution Sandbox  │    │
+│                                   │  (Isolated, Limited)│    │
+│                                   └─────────────────────┘    │
+└───────────────────────────────────────────────────────────────┘
+         │                              │
+         │                              │
+┌────────▼────────┐          ┌──────────▼──────────┐
+│  GitHub/GitLab  │          │   PatchBot Agent    │
+│   CI/CD Logs    │◄─────────┤  - Fix Generation   │
+│   PR Creation   │          │  - Test Validation  │
+└─────────────────┘          │  - PR Submission    │
+                             └─────────────────────┘
+```
+
+### Implementation Details
+
+**Agent Controller Components:**
+1. **Agent Executor Service** (`services/agent-controller/`)
+   - Agent task queue (Redis/RabbitMQ)
+   - Sandboxed execution runtime (Docker/gVisor)
+   - Result aggregation and storage
+
+2. **Agent SDK** (`libs/agent-sdk/`)
+   - Python/Go SDK for agent development
+   - Standard interfaces: `initialize()`, `execute(task)`, `cleanup()`
+   - Built-in telemetry and logging
+
+3. **PatchBot Agent** (`agents/patchbot/`)
+   - LLM-powered code fix generation
+   - Integration with git repositories
+   - Test execution and validation
+   - PR creation and management
+
+**gRPC Protocol Extensions:**
+```protobuf
+service AgentController {
+  rpc RegisterAgent(AgentInfo) returns (AgentId);
+  rpc InvokeAgent(AgentTask) returns (stream AgentResult);
+  rpc GetAgentStatus(AgentId) returns (AgentStatus);
+  rpc CancelTask(TaskId) returns (Ack);
+}
+
+message AgentTask {
+  string agent_id = 1;
+  string task_type = 2;  // fix_ci_failure, optimize_config, etc.
+  map<string, string> context = 3;
+  bytes payload = 4;
+  int32 timeout_seconds = 5;
+  map<string, string> policy_overrides = 6;
+}
+
+message AgentResult {
+  string task_id = 1;
+  string status = 2;  // running, completed, failed
+  float progress = 3;
+  repeated Artifact artifacts = 4;  // generated files, PRs, logs
+  map<string, float> metrics = 5;
+  string error_message = 6;
+}
+```
+
+**Database Schema Extensions:**
+```sql
+-- Agent registry
+CREATE TABLE agents (
+  id UUID PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  version VARCHAR(20) NOT NULL,
+  capabilities JSONB NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  health_score FLOAT,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
+);
+
+-- Agent tasks and outcomes
+CREATE TABLE agent_tasks (
+  id UUID PRIMARY KEY,
+  agent_id UUID REFERENCES agents(id),
+  task_type VARCHAR(50) NOT NULL,
+  context JSONB NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  result JSONB,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  duration_ms INTEGER,
+  correlation_id UUID  -- Link to InfraMind prediction
+);
+
+-- Failure → Fix correlation
+CREATE TABLE failure_fixes (
+  id UUID PRIMARY KEY,
+  failure_signature VARCHAR(255) NOT NULL,
+  repository VARCHAR(255) NOT NULL,
+  failure_type VARCHAR(50) NOT NULL,
+  agent_task_id UUID REFERENCES agent_tasks(id),
+  fix_pr_url VARCHAR(500),
+  fix_confidence FLOAT,
+  fix_success BOOLEAN,
+  time_to_fix_seconds INTEGER,
+  created_at TIMESTAMP
+);
+```
+
+### Success Criteria
+- ✅ Agent Controller operational with PatchBot registered
+- ✅ PatchBot successfully fixes 3+ types of CI failures
+- ✅ 70%+ fix success rate on linting and test failures
+- ✅ Average time-to-PR under 5 minutes
+- ✅ Zero unauthorized actions (all policy-compliant)
+- ✅ Telemetry correlation shows InfraMind prediction → PatchBot fix link
+- ✅ Human review workflow functional with approval gates
+
+### Deliverables
+- **Agent Controller Service:** Complete with registry, scheduling, sandboxing
+- **PatchBot Agent:** Working implementation with GitHub integration
+- **Failure Ingestion Pipeline:** CI/CD log parsing and classification
+- **Policy Engine Extensions:** Auto-remediation policies and gates
+- **Telemetry Correlation:** Bidirectional flow between InfraMind and agents
+- **Documentation:** Agent development guide, PatchBot user manual, policy configuration guide
+- **Tests:** Agent lifecycle tests, PatchBot integration tests, policy enforcement tests
+- **Dashboards:** Agent performance metrics, fix success rates, time-to-resolution
+
+### Risks & Mitigations
+- **Risk:** Agent generates breaking changes
+  - **Mitigation:** Sandbox validation, confidence thresholds, mandatory review for high-risk changes
+
+- **Risk:** Agent overwhelms repositories with PRs
+  - **Mitigation:** Rate limiting policies, cooldown periods, blast radius controls
+
+- **Risk:** Security vulnerabilities in agent code
+  - **Mitigation:** Isolated execution, restricted permissions, regular security audits
+
+- **Risk:** InfraMind predictions are inaccurate
+  - **Mitigation:** Feedback loop to improve models, human review gates, rollback mechanisms
+
+---
+
+## Future Phases (Post-Phase 5)
+
+### Phase 6: Multi-Tenancy & Federation
 - Tenant isolation and quotas
 - Federated cluster management
 - Cross-region workload migration
 - Cost allocation and chargebacks
 
-### Phase 6: Advanced ML Integration
+### Phase 7: Advanced ML Integration
 - Custom model deployment for optimization
 - Reinforcement learning for scheduling
 - Anomaly detection and auto-remediation
 - Predictive capacity planning
 
-### Phase 7: Edge Computing
+### Phase 8: Edge Computing
 - Edge node management
 - Federated learning support
 - Low-latency inference at edge
 - Intermittent connectivity handling
 
-### Phase 8: Ecosystem Integration
+### Phase 9: Ecosystem Integration
 - ArgoCD/Flux integration
 - Service mesh support (Istio, Linkerd)
 - Cloud provider integrations (AWS, GCP, Azure)
