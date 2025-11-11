@@ -52,7 +52,11 @@ class PlanExecutor:
         self._execution_history: dict[UUID, dict[str, Any]] = {}
 
     async def execute_plan(
-        self, plan_id: UUID, plan_data: dict[str, Any], actor: str = "system"
+        self,
+        plan_id: UUID,
+        plan_data: dict[str, Any],
+        actor: str = "system",
+        shadow_mode: bool = False,
     ) -> dict[str, Any]:
         """
         Execute an action plan.
@@ -61,6 +65,7 @@ class PlanExecutor:
             plan_id: Unique plan identifier
             plan_data: Plan data including decisions
             actor: User/system executing the plan
+            shadow_mode: If True, simulate without executing
 
         Returns:
             Execution result with status and metrics
@@ -74,7 +79,8 @@ class PlanExecutor:
         self._executing_plans.add(plan_id)
         start_time = datetime.utcnow()
 
-        logger.info(f"Starting execution of plan {plan_id}")
+        mode_str = "SHADOW" if shadow_mode else "LIVE"
+        logger.info(f"Starting {mode_str} execution of plan {plan_id}")
 
         try:
             # Step 1: Validate against policies
@@ -89,10 +95,11 @@ class PlanExecutor:
             results = []
 
             for i, decision in enumerate(decisions):
-                logger.info(f"Executing decision {i+1}/{len(decisions)}: {decision['verb']}")
+                action_verb = "Simulating" if shadow_mode else "Executing"
+                logger.info(f"{action_verb} decision {i+1}/{len(decisions)}: {decision['verb']}")
 
                 try:
-                    result = await self._execute_decision(decision)
+                    result = await self._execute_decision(decision, shadow_mode=shadow_mode)
                     results.append(result)
 
                     # Publish success event
@@ -235,12 +242,15 @@ class PlanExecutor:
             logger.error(f"Policy validation error: {e}", exc_info=True)
             return {"valid": False, "reason": str(e)}
 
-    async def _execute_decision(self, decision: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_decision(
+        self, decision: dict[str, Any], shadow_mode: bool = False
+    ) -> dict[str, Any]:
         """
         Execute a single decision.
 
         Args:
             decision: Decision data with verb, target, and params
+            shadow_mode: If True, simulate without executing
 
         Returns:
             Execution result
@@ -253,27 +263,40 @@ class PlanExecutor:
         params = decision.get("params", {})
         ttl = decision.get("ttl", 900)
 
-        logger.info(f"Executing: {verb} on {target} with params {params}")
+        action = "Simulating" if shadow_mode else "Executing"
+        logger.info(f"{action}: {verb} on {target} with params {params}")
 
         # Route to appropriate handler based on verb
         if verb == "scale":
-            return await self._handle_scale(target, params, ttl)
+            return await self._handle_scale(target, params, ttl, shadow_mode)
         elif verb == "reschedule":
-            return await self._handle_reschedule(target, params, ttl)
+            return await self._handle_reschedule(target, params, ttl, shadow_mode)
         elif verb == "rollback":
-            return await self._handle_rollback(target, params, ttl)
+            return await self._handle_rollback(target, params, ttl, shadow_mode)
         elif verb == "update":
-            return await self._handle_update(target, params, ttl)
+            return await self._handle_update(target, params, ttl, shadow_mode)
         else:
             raise PlanExecutionError(f"Unknown verb: {verb}")
 
     async def _handle_scale(
-        self, target: dict[str, Any], params: dict[str, Any], ttl: int
+        self, target: dict[str, Any], params: dict[str, Any], ttl: int, shadow_mode: bool = False
     ) -> dict[str, Any]:
         """Handle scale decision."""
         workload_name = target.get("workload")
         cluster_id = target.get("cluster", "default")
         new_replicas = int(params.get("replicas", 1))
+
+        if shadow_mode:
+            logger.info(f"SHADOW: Would scale {workload_name} to {new_replicas} replicas")
+            await asyncio.sleep(0.1)  # Simulate validation time
+            return {
+                "action": "scale",
+                "workload": workload_name,
+                "new_replicas": new_replicas,
+                "status": "simulated",
+                "shadow_mode": True,
+                "would_execute": True,
+            }
 
         logger.info(f"Scaling {workload_name} to {new_replicas} replicas")
 
@@ -310,11 +333,23 @@ class PlanExecutor:
             }
 
     async def _handle_reschedule(
-        self, target: dict[str, Any], params: dict[str, Any], ttl: int
+        self, target: dict[str, Any], params: dict[str, Any], ttl: int, shadow_mode: bool = False
     ) -> dict[str, Any]:
         """Handle reschedule decision."""
         workload_name = target.get("workload")
         new_node = params.get("node")
+
+        if shadow_mode:
+            logger.info(f"SHADOW: Would reschedule {workload_name} to node {new_node}")
+            await asyncio.sleep(0.1)
+            return {
+                "action": "reschedule",
+                "workload": workload_name,
+                "target_node": new_node,
+                "status": "simulated",
+                "shadow_mode": True,
+                "would_execute": True,
+            }
 
         logger.info(f"Rescheduling {workload_name} to node {new_node}")
 
@@ -329,11 +364,23 @@ class PlanExecutor:
         }
 
     async def _handle_rollback(
-        self, target: dict[str, Any], params: dict[str, Any], ttl: int
+        self, target: dict[str, Any], params: dict[str, Any], ttl: int, shadow_mode: bool = False
     ) -> dict[str, Any]:
         """Handle rollback decision."""
         workload_name = target.get("workload")
         revision = params.get("revision", "previous")
+
+        if shadow_mode:
+            logger.info(f"SHADOW: Would roll back {workload_name} to revision {revision}")
+            await asyncio.sleep(0.1)
+            return {
+                "action": "rollback",
+                "workload": workload_name,
+                "revision": revision,
+                "status": "simulated",
+                "shadow_mode": True,
+                "would_execute": True,
+            }
 
         logger.info(f"Rolling back {workload_name} to revision {revision}")
 
@@ -348,10 +395,22 @@ class PlanExecutor:
         }
 
     async def _handle_update(
-        self, target: dict[str, Any], params: dict[str, Any], ttl: int
+        self, target: dict[str, Any], params: dict[str, Any], ttl: int, shadow_mode: bool = False
     ) -> dict[str, Any]:
         """Handle update decision."""
         workload_name = target.get("workload")
+
+        if shadow_mode:
+            logger.info(f"SHADOW: Would update {workload_name} with params {params}")
+            await asyncio.sleep(0.1)
+            return {
+                "action": "update",
+                "workload": workload_name,
+                "params": params,
+                "status": "simulated",
+                "shadow_mode": True,
+                "would_execute": True,
+            }
 
         logger.info(f"Updating {workload_name} with params {params}")
 

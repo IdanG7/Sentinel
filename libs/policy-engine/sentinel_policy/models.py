@@ -16,6 +16,7 @@ class PolicyRuleType(str, Enum):
     SLA = "sla"
     SLO = "slo"
     QUOTA = "quota"
+    CHANGE_FREEZE = "change_freeze"
 
 
 class PolicyRule(BaseModel):

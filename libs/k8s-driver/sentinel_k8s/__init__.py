@@ -1,7 +1,9 @@
 """Sentinel Kubernetes Driver - Multi-cluster K8s resource management."""
 
+from .canary import CanaryConfig, CanaryDeployment, CanaryDeploymentController, CanaryPhase
 from .cluster import ClusterConnection, ClusterManager
 from .deployments import DeploymentManager
+from .health import DeploymentHealthChecker, HealthCheckResult, HealthStatus
 from .jobs import JobManager
 from .models import (
     ClusterConfig,
@@ -26,6 +28,15 @@ __all__ = [
     "DeploymentManager",
     "JobManager",
     "StatefulSetManager",
+    # Health checking
+    "DeploymentHealthChecker",
+    "HealthCheckResult",
+    "HealthStatus",
+    # Canary deployments
+    "CanaryDeploymentController",
+    "CanaryDeployment",
+    "CanaryConfig",
+    "CanaryPhase",
     # Watch and reconciliation
     "ResourceWatcher",
     "ReconciliationLoop",

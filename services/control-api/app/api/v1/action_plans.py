@@ -115,6 +115,7 @@ async def get_action_plan(
 async def execute_action_plan(
     plan_id: UUID,
     background_tasks: BackgroundTasks,
+    shadow_mode: bool = False,
     current_user: str = Depends(get_current_user),
     executor: PlanExecutor = Depends(get_plan_executor),
 ) -> dict[str, Any]:
@@ -123,6 +124,10 @@ async def execute_action_plan(
 
     This endpoint triggers execution of a validated action plan.
     Execution happens in the background and can be monitored via status endpoint.
+
+    Args:
+        plan_id: Action plan ID to execute
+        shadow_mode: If True, simulate execution without actually applying changes
     """
     plan = action_plans_db.get(plan_id)
     if not plan:
@@ -145,7 +150,9 @@ async def execute_action_plan(
     # Execute plan in background
     async def execute_plan() -> None:
         try:
-            result = await executor.execute_plan(plan_id, plan, actor=current_user)
+            result = await executor.execute_plan(
+                plan_id, plan, actor=current_user, shadow_mode=shadow_mode
+            )
 
             # Update plan status on completion
             plan["status"] = ActionPlanStatus.COMPLETED.value
@@ -160,10 +167,12 @@ async def execute_action_plan(
 
     background_tasks.add_task(execute_plan)
 
+    mode_str = "shadow" if shadow_mode else "live"
     return {
         "plan_id": str(plan_id),
         "status": "executing",
-        "message": "Plan execution started in background",
+        "mode": mode_str,
+        "message": f"Plan execution started in background ({mode_str} mode)",
     }
 
 

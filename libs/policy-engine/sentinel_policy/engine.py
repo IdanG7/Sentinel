@@ -14,6 +14,7 @@ from .models import (
     PolicyRuleType,
     PolicyViolation,
 )
+from .rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class EvaluationMode(str, Enum):
     ENFORCE = "enforce"
     DRY_RUN = "dry_run"
     AUDIT = "audit"
+    SHADOW = "shadow"  # Full simulation without execution
 
 
 class PolicyEngine:
@@ -33,15 +35,19 @@ class PolicyEngine:
     Evaluates action plans against registered policies and enforces constraints.
     """
 
-    def __init__(self, mode: EvaluationMode = EvaluationMode.ENFORCE):
+    def __init__(
+        self, mode: EvaluationMode = EvaluationMode.ENFORCE, rate_limiter: RateLimiter | None = None
+    ):
         """
         Initialize policy engine.
 
         Args:
-            mode: Evaluation mode (enforce, dry_run, audit)
+            mode: Evaluation mode (enforce, dry_run, audit, shadow)
+            rate_limiter: Rate limiter instance (creates new one if not provided)
         """
         self.mode = mode
         self._policies: dict[str, Policy] = {}
+        self._rate_limiter = rate_limiter or RateLimiter()
         logger.info(f"Policy engine initialized in {mode} mode")
 
     def register_policy(self, policy: Policy) -> None:
@@ -134,12 +140,22 @@ class PolicyEngine:
                         )
 
         # Determine verdict
-        approved = len(violations) == 0 or self.mode == EvaluationMode.DRY_RUN
+        approved = (
+            len(violations) == 0
+            or self.mode == EvaluationMode.DRY_RUN
+            or self.mode == EvaluationMode.SHADOW
+        )
 
-        # In dry-run mode, log violations but don't reject
+        # In dry-run or shadow mode, log violations but don't reject
         if self.mode == EvaluationMode.DRY_RUN and violations:
             logger.info(
                 f"DRY RUN: Action plan would be rejected with {len(violations)} violations"
+            )
+        elif self.mode == EvaluationMode.SHADOW:
+            logger.info(
+                f"SHADOW MODE: Simulating action plan execution "
+                f"({'would be rejected' if violations else 'would succeed'} "
+                f"with {len(violations)} violations)"
             )
 
         # Calculate evaluation duration
@@ -209,6 +225,8 @@ class PolicyEngine:
             return self._check_slo(decision, rule, policy)
         elif rule_type == PolicyRuleType.QUOTA:
             return self._check_quota(decision, rule, policy)
+        elif rule_type == PolicyRuleType.CHANGE_FREEZE:
+            return self._check_change_freeze(decision, rule, policy)
         else:
             logger.warning(f"Unknown rule type: {rule_type}")
             return None
@@ -251,19 +269,65 @@ class PolicyEngine:
         """
         Check if decision violates rate limit constraint.
 
-        Constraint format: {"max_operations_per_minute": 10}
-
-        Note: Rate limiting requires state tracking across evaluations.
-        This is a simplified implementation for Phase 1.
+        Constraint format: {
+            "max_operations_per_minute": 10,
+            "max_operations_per_hour": 100,
+            "scope": "workload"  # or "cluster", "namespace", "global"
+        }
         """
-        # TODO: Implement rate limit tracking with Redis or similar
-        # For now, we'll just validate the constraint format
-        max_ops = rule.constraint.get("max_operations_per_minute")
-        if max_ops is None:
+        # Build resource key based on scope
+        scope = rule.constraint.get("scope", "workload")
+        if scope == "workload":
+            resource_key = decision.target.get("workload") or decision.target.get("deployment_id")
+        elif scope == "cluster":
+            resource_key = f"cluster:{decision.target.get('cluster', 'default')}"
+        elif scope == "namespace":
+            resource_key = f"namespace:{decision.target.get('namespace', 'default')}"
+        else:  # global
+            resource_key = "global"
+
+        if not resource_key:
+            logger.warning("Cannot determine resource key for rate limiting")
             return None
 
-        # In a real implementation, we would track operation counts
-        # and check against the limit here
+        # Check per-minute limit
+        max_ops_per_min = rule.constraint.get("max_operations_per_minute")
+        if max_ops_per_min:
+            allowed, metadata = self._rate_limiter.check_rate_limit(
+                resource_key=f"{resource_key}:minute",
+                max_operations=max_ops_per_min,
+                window_seconds=60,
+            )
+            if not allowed:
+                return PolicyViolation(
+                    policy_id=policy.id,
+                    policy_name=policy.name,
+                    rule_type=rule.type,
+                    message=f"Rate limit exceeded: {metadata['current_count']} operations/minute > {max_ops_per_min} (scope: {scope})",
+                    decision_verb=decision.verb,
+                    decision_target=decision.target,
+                    action=rule.action_on_violation,
+                )
+
+        # Check per-hour limit
+        max_ops_per_hour = rule.constraint.get("max_operations_per_hour")
+        if max_ops_per_hour:
+            allowed, metadata = self._rate_limiter.check_rate_limit(
+                resource_key=f"{resource_key}:hour",
+                max_operations=max_ops_per_hour,
+                window_seconds=3600,
+            )
+            if not allowed:
+                return PolicyViolation(
+                    policy_id=policy.id,
+                    policy_name=policy.name,
+                    rule_type=rule.type,
+                    message=f"Rate limit exceeded: {metadata['current_count']} operations/hour > {max_ops_per_hour} (scope: {scope})",
+                    decision_verb=decision.verb,
+                    decision_target=decision.target,
+                    action=rule.action_on_violation,
+                )
+
         return None
 
     def _check_sla(
@@ -413,6 +477,102 @@ class PolicyEngine:
                     policy_name=policy.name,
                     rule_type=rule.type,
                     message=f"GPU quota exceeded: {requested_gpus} > {max_gpus}",
+                    decision_verb=decision.verb,
+                    decision_target=decision.target,
+                    action=rule.action_on_violation,
+                )
+
+        return None
+
+    def _check_change_freeze(
+        self, decision: Decision, rule: PolicyRule, policy: Policy
+    ) -> Optional[PolicyViolation]:
+        """
+        Check if decision violates change freeze window.
+
+        Constraint format: {
+            "freeze_windows": [
+                {
+                    "start": "2025-11-11T00:00:00Z",
+                    "end": "2025-11-12T00:00:00Z",
+                    "reason": "Holiday freeze",
+                    "timezone": "UTC"
+                }
+            ],
+            "recurring": {
+                "days_of_week": [6, 0],  # Saturday=6, Sunday=0
+                "hours": [22, 23, 0, 1, 2, 3, 4, 5],
+                "timezone": "UTC"
+            },
+            "exempt_sources": ["user"]  # Exempt user-initiated changes
+        }
+        """
+        from datetime import datetime as dt
+        import pytz
+
+        now = dt.utcnow().replace(tzinfo=pytz.UTC)
+
+        # Check if source is exempt
+        exempt_sources = rule.constraint.get("exempt_sources", [])
+        decision_source = decision.params.get("source")
+        if decision_source and decision_source in exempt_sources:
+            return None
+
+        # Check absolute freeze windows
+        freeze_windows = rule.constraint.get("freeze_windows", [])
+        for window in freeze_windows:
+            try:
+                start = dt.fromisoformat(window["start"].replace("Z", "+00:00"))
+                end = dt.fromisoformat(window["end"].replace("Z", "+00:00"))
+                timezone = pytz.timezone(window.get("timezone", "UTC"))
+
+                # Convert to specified timezone
+                start = start.astimezone(timezone)
+                end = end.astimezone(timezone)
+                now_tz = now.astimezone(timezone)
+
+                if start <= now_tz <= end:
+                    reason = window.get("reason", "Change freeze window")
+                    return PolicyViolation(
+                        policy_id=policy.id,
+                        policy_name=policy.name,
+                        rule_type=rule.type,
+                        message=f"Change freeze active: {reason} ({start} - {end})",
+                        decision_verb=decision.verb,
+                        decision_target=decision.target,
+                        action=rule.action_on_violation,
+                    )
+            except (KeyError, ValueError) as e:
+                logger.warning(f"Invalid freeze window configuration: {e}")
+                continue
+
+        # Check recurring freeze windows
+        recurring = rule.constraint.get("recurring")
+        if recurring:
+            timezone = pytz.timezone(recurring.get("timezone", "UTC"))
+            now_tz = now.astimezone(timezone)
+
+            # Check day of week (0=Monday, 6=Sunday)
+            days_of_week = recurring.get("days_of_week", [])
+            if days_of_week and now_tz.weekday() in days_of_week:
+                return PolicyViolation(
+                    policy_id=policy.id,
+                    policy_name=policy.name,
+                    rule_type=rule.type,
+                    message=f"Recurring freeze: Changes not allowed on {now_tz.strftime('%A')}",
+                    decision_verb=decision.verb,
+                    decision_target=decision.target,
+                    action=rule.action_on_violation,
+                )
+
+            # Check hour of day
+            hours = recurring.get("hours", [])
+            if hours and now_tz.hour in hours:
+                return PolicyViolation(
+                    policy_id=policy.id,
+                    policy_name=policy.name,
+                    rule_type=rule.type,
+                    message=f"Recurring freeze: Changes not allowed at {now_tz.hour}:00",
                     decision_verb=decision.verb,
                     decision_target=decision.target,
                     action=rule.action_on_violation,
