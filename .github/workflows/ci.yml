@@ -72,10 +72,11 @@ jobs:
         run: go vet ./...
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v1.64.8
           working-directory: services/agent
+          args: --out-format=colored-line-number --path-prefix=services/agent --timeout=5m
 
   # Test Python services
   test-python:

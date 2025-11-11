@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import signal
-from typing import Optional
 
 from app.config import Settings, get_settings
 from app.controller import PipelineController

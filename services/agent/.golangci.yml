@@ -1,0 +1,21 @@
+run:
+  timeout: 5m
+
+output:
+  format: colored-line-number
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - gosimple
+    - staticcheck
+    - ineffassign
+    - gocritic
+    - revive
+
+linters-settings:
+  errcheck:
+    # Keep strict by default
+    check-type-assertions: true
+    check-blank: true

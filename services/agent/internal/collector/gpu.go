@@ -115,7 +115,12 @@ func (c *GPUCollector) Collect(ctx context.Context) error {
 			zap.String("error", nvml.ErrorString(ret)))
 		return nil
 	}
-	defer nvml.Shutdown()
+	defer func() {
+		if ret := nvml.Shutdown(); ret != nvml.SUCCESS {
+			c.logger.Warn("failed to shutdown NVML",
+				zap.String("error", nvml.ErrorString(ret)))
+		}
+	}()
 
 	// Get device count
 	count, ret := nvml.DeviceGetCount()
