@@ -76,6 +76,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "T20"]
 ignore = [
     "E501",  # Line too long (handled by black)
     "B008",  # Do not perform function calls in argument defaults (FastAPI Depends pattern)
+    "A002",  # Argument shadowing builtin (common pattern for 'id' in CRUD operations)
 ]
 
 [tool.mypy]
