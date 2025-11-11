@@ -153,6 +153,10 @@ class InfraMindAdapter:
         """Collect events from Kafka and add to telemetry batch."""
         logger.info("Starting event collection loop...")
 
+        if not self.consumer:
+            logger.error("Consumer not initialized, cannot start event collection loop")
+            return
+
         try:
             async for message in self.consumer:
                 if not self._running:
@@ -281,6 +285,10 @@ class InfraMindAdapter:
         Args:
             action_plan: ActionPlan proto message from InfraMind
         """
+        if not self.http_client:
+            logger.error("HTTP client not initialized, cannot forward action plan")
+            raise RuntimeError("HTTP client not initialized")
+
         logger.info(f"Forwarding action plan {action_plan.plan_id} to Control API")
 
         # Convert proto to dict for HTTP API
