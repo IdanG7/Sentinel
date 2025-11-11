@@ -62,9 +62,7 @@ async def get_policy(
     """
     policy = policies_db.get(policy_id)
     if not policy:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
 
     return PolicyResponse(**policy)
 
@@ -79,9 +77,7 @@ async def update_policy(
     Update an existing policy.
     """
     if policy_id not in policies_db:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
 
     policy_data = policies_db[policy_id]
     policy_data.update(
@@ -106,8 +102,6 @@ async def delete_policy(
     Delete a policy.
     """
     if policy_id not in policies_db:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
 
     del policies_db[policy_id]

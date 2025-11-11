@@ -106,9 +106,7 @@ async def get_action_plan(
     """
     plan = action_plans_db.get(plan_id)
     if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found")
 
     return ActionPlanResponse(**plan)
 
@@ -133,9 +131,7 @@ async def execute_action_plan(
     """
     plan = action_plans_db.get(plan_id)
     if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found")
 
     # Check if already executing or completed
     if plan["status"] in [
@@ -193,9 +189,7 @@ async def get_execution_status(
     """
     plan = action_plans_db.get(plan_id)
     if not plan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action plan not found")
 
     # Get execution details from executor
     execution_status = executor.get_execution_status(plan_id)

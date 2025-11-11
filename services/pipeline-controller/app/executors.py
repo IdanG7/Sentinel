@@ -80,9 +80,7 @@ class DeploymentExecutor:
 
         # Create deployment
         k8s_deployment = deployment_manager.create(spec)
-        logger.info(
-            f"✓ Deployment {deployment_id} created: {k8s_deployment.metadata.name}"
-        )
+        logger.info(f"✓ Deployment {deployment_id} created: {k8s_deployment.metadata.name}")
 
         # Store in history
         self._deployment_history[deployment_id] = [

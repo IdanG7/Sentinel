@@ -88,9 +88,7 @@ class PlanExecutor:
             validation_result = await self._validate_plan(plan_data)
 
             if not validation_result["valid"]:
-                raise PlanExecutionError(
-                    f"Plan validation failed: {validation_result['reason']}"
-                )
+                raise PlanExecutionError(f"Plan validation failed: {validation_result['reason']}")
 
             # Step 2: Execute decisions
             decisions = plan_data.get("decisions", [])
@@ -98,14 +96,10 @@ class PlanExecutor:
 
             for i, decision in enumerate(decisions):
                 action_verb = "Simulating" if shadow_mode else "Executing"
-                logger.info(
-                    f"{action_verb} decision {i+1}/{len(decisions)}: {decision['verb']}"
-                )
+                logger.info(f"{action_verb} decision {i+1}/{len(decisions)}: {decision['verb']}")
 
                 try:
-                    result = await self._execute_decision(
-                        decision, shadow_mode=shadow_mode
-                    )
+                    result = await self._execute_decision(decision, shadow_mode=shadow_mode)
                     results.append(result)
 
                     # Publish success event
@@ -122,9 +116,7 @@ class PlanExecutor:
                         )
 
                 except Exception as e:
-                    logger.error(
-                        f"Failed to execute decision {i+1}: {e}", exc_info=True
-                    )
+                    logger.error(f"Failed to execute decision {i+1}: {e}", exc_info=True)
 
                     # Publish failure event
                     if self.event_publisher:
@@ -176,9 +168,7 @@ class PlanExecutor:
                     },
                 )
 
-            logger.info(
-                f"✓ Plan {plan_id} executed successfully in {execution_duration:.2f}s"
-            )
+            logger.info(f"✓ Plan {plan_id} executed successfully in {execution_duration:.2f}s")
 
             return execution_result
 
@@ -301,9 +291,7 @@ class PlanExecutor:
         new_replicas = int(params.get("replicas", 1))
 
         if shadow_mode:
-            logger.info(
-                f"SHADOW: Would scale {workload_name} to {new_replicas} replicas"
-            )
+            logger.info(f"SHADOW: Would scale {workload_name} to {new_replicas} replicas")
             await asyncio.sleep(0.1)  # Simulate validation time
             return {
                 "action": "scale",
@@ -395,9 +383,7 @@ class PlanExecutor:
         revision = params.get("revision", "previous")
 
         if shadow_mode:
-            logger.info(
-                f"SHADOW: Would roll back {workload_name} to revision {revision}"
-            )
+            logger.info(f"SHADOW: Would roll back {workload_name} to revision {revision}")
             await asyncio.sleep(0.1)
             return {
                 "action": "rollback",

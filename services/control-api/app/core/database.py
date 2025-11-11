@@ -11,9 +11,7 @@ from app.core.config import get_settings
 settings = get_settings()
 
 # Convert postgresql:// to postgresql+asyncpg://
-database_url = settings.database_url_str.replace(
-    "postgresql://", "postgresql+asyncpg://"
-)
+database_url = settings.database_url_str.replace("postgresql://", "postgresql+asyncpg://")
 
 # Create async engine
 engine = create_async_engine(

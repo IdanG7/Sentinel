@@ -47,18 +47,14 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(subject: str, settings: Settings) -> str:
     """Create JWT access token."""
-    expire = datetime.utcnow() + timedelta(
-        minutes=settings.jwt_access_token_expire_minutes
-    )
+    expire = datetime.utcnow() + timedelta(minutes=settings.jwt_access_token_expire_minutes)
     to_encode = {
         "sub": subject,
         "exp": expire,
         "iat": datetime.utcnow(),
         "type": "access",
     }
-    encoded_jwt = jwt.encode(
-        to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
@@ -71,18 +67,14 @@ def create_refresh_token(subject: str, settings: Settings) -> str:
         "iat": datetime.utcnow(),
         "type": "refresh",
     }
-    encoded_jwt = jwt.encode(
-        to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
 def decode_token(token: str, settings: Settings) -> dict[str, Any]:
     """Decode and validate JWT token."""
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         return payload
     except JWTError as e:
         raise HTTPException(

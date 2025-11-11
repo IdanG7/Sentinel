@@ -79,9 +79,7 @@ async def get_workload(
     """
     workload = await workload_crud.get(db, workload_id)
     if not workload:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workload not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workload not found")
 
     return WorkloadResponse(
         id=workload.id,
@@ -107,6 +105,4 @@ async def delete_workload(
     """
     workload = await workload_crud.delete(db, id=workload_id)
     if not workload:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workload not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workload not found")

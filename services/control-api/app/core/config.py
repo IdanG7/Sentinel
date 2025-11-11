@@ -29,9 +29,7 @@ class Settings(BaseSettings):
     workers: int = 4
 
     # Database Settings
-    database_url: str = Field(
-        default="postgresql://sentinel:sentinel@localhost:5432/sentinel"
-    )
+    database_url: str = Field(default="postgresql://sentinel:sentinel@localhost:5432/sentinel")
     database_pool_size: int = 20
     database_max_overflow: int = 10
 
@@ -45,9 +43,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # CORS Settings
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8080"]
-    )
+    cors_origins: list[str] = Field(default=["http://localhost:3000", "http://localhost:8080"])
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = Field(default=["*"])
     cors_allow_headers: list[str] = Field(default=["*"])
