@@ -7,8 +7,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml .
-COPY app/ ./app/
+# Copy and install local dependencies first
+COPY libs/sentinel-common /build/libs/sentinel-common
+RUN pip install --no-cache-dir /build/libs/sentinel-common
+
+# Copy service files
+COPY services/infra-adapter/pyproject.toml .
+COPY services/infra-adapter/app/ ./app/
+
+# Build the service wheel
 RUN pip install --no-cache-dir build && \
     python -m build --wheel && \
     pip wheel --no-cache-dir --wheel-dir=/build/wheels -e .
@@ -24,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /build/wheels /wheels
 RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
 
-COPY app/ /app/app/
+COPY services/infra-adapter/app/ /app/app/
 
 RUN useradd -m -u 1000 sentinel && chown -R sentinel:sentinel /app
 USER sentinel

@@ -7,7 +7,7 @@ WORKDIR /build
 RUN apk add --no-cache git make
 
 # Copy source code
-COPY . .
+COPY services/agent/ .
 
 # Generate go.sum and download dependencies
 RUN go mod tidy

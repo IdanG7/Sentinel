@@ -8,9 +8,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
-COPY pyproject.toml .
-COPY app/ ./app/
+# Copy and install local dependencies first
+COPY libs/sentinel-common /build/libs/sentinel-common
+COPY libs/k8s-driver /build/libs/k8s-driver
+RUN pip install --no-cache-dir /build/libs/sentinel-common && \
+    pip install --no-cache-dir /build/libs/k8s-driver
+
+# Copy service files
+COPY services/control-api/pyproject.toml .
+COPY services/control-api/app/ ./app/
+
+# Build the service wheel
 RUN pip install --no-cache-dir build && \
     python -m build --wheel && \
     pip wheel --no-cache-dir --wheel-dir=/build/wheels -e .
@@ -30,7 +38,7 @@ COPY --from=builder /build/wheels /wheels
 RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
 
 # Copy application code
-COPY app/ /app/app/
+COPY services/control-api/app/ /app/app/
 
 # Create non-root user
 RUN useradd -m -u 1000 sentinel && chown -R sentinel:sentinel /app
