@@ -243,6 +243,12 @@ jobs:
           pip install -e libs/k8s-driver
           pip install -e libs/policy-engine
 
+      - name: Install service dependencies
+        run: |
+          pip install -e "services/control-api[dev]"
+          pip install -e "services/pipeline-controller[dev]"
+          pip install -e "services/infra-adapter[dev]"
+
       - name: Install test dependencies
         run: |
           pip install -r tests/requirements.txt
