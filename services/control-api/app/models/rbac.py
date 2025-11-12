@@ -1,14 +1,12 @@
 """RBAC data models and database schemas."""
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Table
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
 from .database import Base
-
 
 # Association table for user-role assignments (many-to-many)
 user_roles = Table(
@@ -81,19 +79,19 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    full_name: Optional[str] = None
-    tenant_id: Optional[str] = None
+    full_name: str | None = None
+    tenant_id: str | None = None
     roles: list[str] = ["viewer"]
 
 
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
 
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    tenant_id: Optional[str] = None
-    enabled: Optional[bool] = None
-    roles: Optional[list[str]] = None
+    email: EmailStr | None = None
+    full_name: str | None = None
+    tenant_id: str | None = None
+    enabled: bool | None = None
+    roles: list[str] | None = None
 
 
 class UserResponse(BaseModel):
@@ -101,9 +99,9 @@ class UserResponse(BaseModel):
 
     id: int
     username: str
-    email: Optional[str]
-    full_name: Optional[str]
-    tenant_id: Optional[str]
+    email: str | None
+    full_name: str | None
+    tenant_id: str | None
     enabled: bool
     roles: list[str]
     created_at: datetime
@@ -117,7 +115,7 @@ class RoleCreate(BaseModel):
     """Schema for creating a role."""
 
     name: str = Field(..., min_length=3, max_length=50)
-    description: Optional[str] = None
+    description: str | None = None
     permissions: list[str]
 
 
@@ -126,7 +124,7 @@ class RoleResponse(BaseModel):
 
     id: int
     name: str
-    description: Optional[str]
+    description: str | None
     permissions: list[str]
     created_at: datetime
 
@@ -138,7 +136,7 @@ class APIKeyCreate(BaseModel):
     """Schema for creating an API key."""
 
     name: str = Field(..., min_length=3, max_length=100)
-    expires_days: Optional[int] = Field(default=90, ge=1, le=365)
+    expires_days: int | None = Field(default=90, ge=1, le=365)
 
 
 class APIKeyResponse(BaseModel):
@@ -147,7 +145,7 @@ class APIKeyResponse(BaseModel):
     id: int
     name: str
     key: str  # Only returned on creation
-    expires_at: Optional[datetime]
+    expires_at: datetime | None
     enabled: bool
     created_at: datetime
 

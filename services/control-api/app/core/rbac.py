@@ -1,9 +1,9 @@
 """RBAC (Role-Based Access Control) middleware and enforcement."""
 
 import logging
+from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Callable, Optional
 
 from fastapi import HTTPException, Request, status
 from pydantic import BaseModel
@@ -87,11 +87,7 @@ ROLE_PERMISSIONS: dict[Role, list[Permission]] = {
         for perm in Permission
         if perm != Permission.SYSTEM_ADMIN
     ],
-    Role.SYSTEM: [
-        # All permissions (internal service-to-service)
-        perm
-        for perm in Permission
-    ],
+    Role.SYSTEM: list(Permission),
 }
 
 
@@ -100,9 +96,9 @@ class User(BaseModel):
 
     id: str
     username: str
-    email: Optional[str] = None
+    email: str | None = None
     role: Role
-    tenant_id: Optional[str] = None
+    tenant_id: str | None = None
     enabled: bool = True
 
 
@@ -230,7 +226,7 @@ def require_role(required_role: Role):
     return decorator
 
 
-def check_tenant_access(user: User, resource_tenant_id: Optional[str]) -> bool:
+def check_tenant_access(user: User, resource_tenant_id: str | None) -> bool:
     """
     Check if user can access a resource based on tenant isolation.
 
