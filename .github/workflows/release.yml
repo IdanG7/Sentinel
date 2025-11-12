@@ -84,10 +84,13 @@ jobs:
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
+      - name: Pull image for SBOM generation
+        run: |
+          docker pull --platform linux/amd64 ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
+
       - name: Generate SBOM
         run: |
-          syft scan ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }} \
-            --platform linux/amd64 \
+          syft scan docker:${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }} \
             -o spdx-json=sbom-${{ matrix.service }}.spdx.json
 
       - name: Upload SBOM
