@@ -2,7 +2,7 @@
 
 > **Autonomous AI Infrastructure Platform powered by InfraMind**
 
-[![Phase](https://img.shields.io/badge/Phase-3%20Complete-success?style=flat-square)](ROADMAP.md)
+[![Phase](https://img.shields.io/badge/Phase-5%20Complete-success?style=flat-square)](ROADMAP.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://golang.org/)
@@ -23,6 +23,22 @@ Observe → Predict → Act → Learn
 - **Learn:** Feed results back to InfraMind for continuous improvement
 
 ## Key Features
+
+### 🤖 **Phase 5: Intelligent Agent Orchestration** ✅ NEW
+- **Agent Controller** - Autonomous AI agent orchestration with task queue and registry
+- **PatchBot** - Auto-fixes CI/CD failures (linting, formatting, tests) and creates PRs
+- **Failure Ingestion** - GitHub/GitLab webhook receivers with automatic failure classification
+- **Agent SDK** - Standard interface for building autonomous remediation agents
+- **Smart Rate Limiting** - Confidence thresholds, blast radius control, and cooldown periods
+- **InfraMind Integration** - Prediction-to-outcome correlation for continuous learning
+
+### 🔒 **Phase 4: Production Hardening** ✅
+- **mTLS encryption** - Mutual TLS for all inter-service communication with cert-manager
+- **HashiCorp Vault** - Zero-trust secrets management with dynamic credentials
+- **RBAC enforcement** - Role-based access control (Viewer, Operator, Admin, System)
+- **Chaos testing** - Pod failures, network partitions, resource stress tests
+- **Load testing** - Comprehensive performance validation with Locust
+- **Operational runbooks** - Incident response and troubleshooting guides
 
 ### 🚀 **Phase 3: Production-Ready Safety & Rollouts**
 - **Canary deployments** with progressive traffic shifting and health gates
@@ -262,8 +278,28 @@ See [ROADMAP.md](ROADMAP.md) for detailed phases and milestones.
   - Event-driven architecture (Kafka)
   - 40+ tests with 94% coverage
 - [x] **Phase 2: InfraMind Integration** ✅ Complete
-- [ ] **Phase 3: Safety, Rollouts, Canary** (Planned)
-- [ ] **Phase 4: Harden & Scale** (Planned)
+  - gRPC telemetry streaming to InfraMind
+  - Action plan execution pipeline
+  - Closed feedback loop operational
+- [x] **Phase 3: Safety, Rollouts, Canary** ✅ Complete
+  - Canary deployments with progressive rollout
+  - Automated rollbacks on health check failure
+  - Shadow evaluation mode
+  - Rate limiting and change freeze windows
+- [x] **Phase 4: Production Hardening** ✅ Complete
+  - mTLS with cert-manager (90-day rotation)
+  - HashiCorp Vault integration
+  - RBAC with 4 roles and 20+ permissions
+  - Chaos testing suite (pod failures, network partition, resource stress)
+  - Load testing with Locust
+  - Operational runbooks and documentation
+- [x] **Phase 5: Agent Orchestration (PatchBot)** ✅ Complete
+  - Agent Controller service with task queue
+  - PatchBot agent for automatic CI/CD failure fixes
+  - Failure Ingestion service with GitHub/GitLab webhooks
+  - Agent SDK for building autonomous agents
+  - Rate limiting and policy enforcement
+- [ ] **Phase 6: Multi-Tenancy & Federation** (Next)
 
 ## Contributing
 
@@ -292,7 +328,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 <div align="center">
 
-**Status:** Phase 2 Complete ✅ | InfraMind Integration Operational
+**Status:** Phase 5 Complete ✅ | AI-Driven Agent Orchestration with PatchBot
 
 **Built with**
 

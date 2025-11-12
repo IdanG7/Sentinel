@@ -159,6 +159,51 @@ services:
       - vault
     restart: unless-stopped
 
+  # Agent Controller (Phase 5)
+  agent-controller:
+    build:
+      context: ./services/agent-controller
+      dockerfile: Dockerfile
+    container_name: sentinel-agent-controller
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sentinel:sentinel@postgres:5432/sentinel
+      REDIS_URL: redis://redis:6379/0
+      VAULT_ADDRESS: http://vault:8200
+      VAULT_TOKEN: sentinel-dev-token
+      LOG_LEVEL: INFO
+      ENVIRONMENT: production
+      MAX_CONCURRENT_TASKS: 10
+      AUTO_MERGE_CONFIDENCE_THRESHOLD: "0.9"
+      SANDBOX_ENABLED: "true"
+    depends_on:
+      - postgres
+      - redis
+      - vault
+    restart: unless-stopped
+
+  # Failure Ingestion Service (Phase 5)
+  failure-ingestion:
+    build:
+      context: ./services/failure-ingestion
+      dockerfile: Dockerfile
+    container_name: sentinel-failure-ingestion
+    ports:
+      - "8004:8004"
+    environment:
+      AGENT_CONTROLLER_URL: http://agent-controller:8003
+      LOG_LEVEL: INFO
+      ENVIRONMENT: production
+      AUTO_CREATE_TASKS: "true"
+      ENABLE_GITHUB_WEBHOOKS: "true"
+      ENABLE_GITLAB_WEBHOOKS: "true"
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      GITLAB_WEBHOOK_SECRET: ${GITLAB_WEBHOOK_SECRET:-}
+    depends_on:
+      - agent-controller
+    restart: unless-stopped
+
 volumes:
   zookeeper-data:
   zookeeper-logs:

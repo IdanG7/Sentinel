@@ -232,7 +232,7 @@ class InfraMindAdapter:
             # Send telemetry to InfraMind Brain (REST API) - PRIMARY METHOD
             if self.settings.inframind_api_enabled:
                 try:
-                    result = await self.inframind_brain.send_telemetry(self._telemetry_batch)
+                    await self.inframind_brain.send_telemetry(self._telemetry_batch)
                     logger.info(f"✓ Sent {batch_size} telemetry points to InfraMind Brain")
                     # Clear batch on success
                     self._telemetry_batch.clear()
