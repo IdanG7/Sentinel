@@ -85,6 +85,7 @@ jobs:
           image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
           format: spdx-json
           output-file: sbom-${{ matrix.service }}.spdx.json
+          platform: linux/amd64
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
@@ -159,9 +160,9 @@ jobs:
             echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Download dependencies
+      - name: Generate go.sum and download dependencies
         working-directory: services/agent
-        run: go mod download
+        run: go mod tidy
 
       - name: Build binary
         working-directory: services/agent
