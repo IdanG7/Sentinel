@@ -357,10 +357,10 @@ class InfraMindAdapter:
         for decision in decisions:
             sentinel_decision = {
                 "verb": decision.get("action", "scale"),  # e.g., scale, restart, migrate
-                "target": decision.get("target", {}),      # Resource to act on
-                "params": decision.get("params", {}),      # Action parameters
-                "ttl": decision.get("ttl", 3600),          # Time to live
-                "safety": decision.get("safety"),          # Safety constraints
+                "target": decision.get("target", {}),  # Resource to act on
+                "params": decision.get("params", {}),  # Action parameters
+                "ttl": decision.get("ttl", 3600),  # Time to live
+                "safety": decision.get("safety"),  # Safety constraints
             }
             sentinel_decisions.append(sentinel_decision)
 

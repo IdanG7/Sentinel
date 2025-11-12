@@ -78,9 +78,7 @@ class InfraMindDecisionClient:
             raise
 
     async def get_optimization_suggestions(
-        self,
-        cluster_id: str,
-        context: dict[str, Any] | None = None
+        self, cluster_id: str, context: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
         """
         Get optimization suggestions from InfraMind.
