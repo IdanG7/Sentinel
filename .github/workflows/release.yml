@@ -68,6 +68,7 @@ jobs:
             type=sha
 
       - name: Build and push image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -79,13 +80,15 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
-          format: spdx-json
-          output-file: sbom-${{ matrix.service }}.spdx.json
-          platform: linux/amd64
+        run: |
+          syft scan ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }} \
+            --platform linux/amd64 \
+            -o spdx-json=sbom-${{ matrix.service }}.spdx.json
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
