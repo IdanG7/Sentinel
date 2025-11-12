@@ -1,0 +1,281 @@
+---
+# Chaos Mesh: Network Partition Tests
+# Tests system behavior when network communication is disrupted
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: partition-control-api-from-db
+  namespace: sentinel-system
+spec:
+  action: partition
+  mode: all
+  selector:
+    labelSelectors:
+      app: control-api
+  direction: to
+  target:
+    selector:
+      labelSelectors:
+        app: postgresql
+    mode: all
+  duration: 2m
+
+---
+# Test: API gracefully handles database connection loss
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: database-partition-recovery
+  namespace: sentinel-system
+spec:
+  entry: partition-and-recover
+  templates:
+    - name: partition-and-recover
+      templateType: Serial
+      deadline: 10m
+      children:
+        - create-baseline-data
+        - partition-database
+        - verify-graceful-degradation
+        - heal-partition
+        - verify-recovery
+
+    - name: create-baseline-data
+      templateType: Task
+      deadline: 1m
+      task:
+        container:
+          name: setup
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Create test workload
+              curl -X POST http://control-api:8000/api/v1/workloads \
+                -H "Content-Type: application/json" \
+                -d '{"name": "chaos-test", "type": "inference"}' || true
+
+    - name: partition-database
+      templateType: NetworkChaos
+      deadline: 3m
+      networkChaos:
+        action: partition
+        mode: all
+        selector:
+          labelSelectors:
+            app: control-api
+        direction: to
+        target:
+          selector:
+            labelSelectors:
+              app: postgresql
+          mode: all
+        duration: 2m
+
+    - name: verify-graceful-degradation
+      templateType: Task
+      deadline: 1m
+      task:
+        container:
+          name: verify
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # API should return 503 or cached data, not crash
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://control-api:8000/api/v1/workloads)
+              if [ "$STATUS" = "503" ] || [ "$STATUS" = "200" ]; then
+                echo "✓ Graceful degradation: HTTP $STATUS"
+                exit 0
+              else
+                echo "❌ Unexpected status: HTTP $STATUS"
+                exit 1
+              fi
+
+    - name: heal-partition
+      templateType: Suspend
+      deadline: 1m
+      suspend:
+        duration: 30s
+
+    - name: verify-recovery
+      templateType: Task
+      deadline: 2m
+      task:
+        container:
+          name: verify
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Wait for connection pool to recover
+              sleep 10
+              # API should fully recover
+              curl -f http://control-api:8000/api/v1/workloads || exit 1
+              echo "✓ Full recovery confirmed"
+
+---
+# Network delay (latency injection)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: latency-control-api
+  namespace: sentinel-system
+spec:
+  action: delay
+  mode: all
+  selector:
+    labelSelectors:
+      app: control-api
+  delay:
+    latency: '500ms'
+    correlation: '50'
+    jitter: '200ms'
+  duration: 5m
+
+---
+# Packet loss between services
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: packet-loss-pipeline
+  namespace: sentinel-system
+spec:
+  action: loss
+  mode: all
+  selector:
+    labelSelectors:
+      app: pipeline-controller
+  loss:
+    loss: '25'
+    correlation: '50'
+  duration: 3m
+
+---
+# Split brain scenario: partition between API and controller
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: split-brain-api-controller
+  namespace: sentinel-system
+spec:
+  action: partition
+  mode: all
+  selector:
+    labelSelectors:
+      app: control-api
+  direction: both
+  target:
+    selector:
+      labelSelectors:
+        app: pipeline-controller
+    mode: all
+  duration: 3m
+
+---
+# Test: System handles split brain correctly
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: split-brain-test
+  namespace: sentinel-system
+spec:
+  entry: split-brain-scenario
+  templates:
+    - name: split-brain-scenario
+      templateType: Serial
+      deadline: 15m
+      children:
+        - submit-action-plan
+        - create-split-brain
+        - verify-no-duplicate-execution
+        - heal-network
+        - verify-eventual-consistency
+
+    - name: submit-action-plan
+      templateType: Task
+      deadline: 1m
+      task:
+        container:
+          name: submit
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              curl -X POST http://control-api:8000/api/v1/action-plans \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "source": "chaos-test",
+                  "decisions": [{
+                    "verb": "scale",
+                    "target": {"deploymentId": "test"},
+                    "params": {"replicas": 3}
+                  }]
+                }'
+
+    - name: create-split-brain
+      templateType: NetworkChaos
+      deadline: 5m
+      networkChaos:
+        action: partition
+        mode: all
+        selector:
+          labelSelectors:
+            app: control-api
+        direction: both
+        target:
+          selector:
+            labelSelectors:
+              app: pipeline-controller
+          mode: all
+        duration: 4m
+
+    - name: verify-no-duplicate-execution
+      templateType: Task
+      deadline: 2m
+      task:
+        container:
+          name: verify
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Check audit logs for duplicate executions
+              AUDIT=$(curl -s http://control-api:8000/api/v1/audits?action=scale)
+              DUPLICATES=$(echo "$AUDIT" | grep -c "scale" || true)
+              if [ "$DUPLICATES" -le 1 ]; then
+                echo "✓ No duplicate executions"
+                exit 0
+              else
+                echo "❌ Detected $DUPLICATES duplicate executions"
+                exit 1
+              fi
+
+    - name: heal-network
+      templateType: Suspend
+      deadline: 1m
+      suspend:
+        duration: 30s
+
+    - name: verify-eventual-consistency
+      templateType: Task
+      deadline: 3m
+      task:
+        container:
+          name: verify
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Wait for reconciliation
+              sleep 30
+              # Verify system state is consistent
+              curl -f http://control-api:8000/api/v1/deployments/test | grep '"replicas":3' || exit 1
+              echo "✓ Eventual consistency achieved"

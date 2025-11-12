@@ -1,0 +1,247 @@
+---
+# Chaos Mesh: Resource Stress Tests
+# Tests system behavior under CPU/memory/IO pressure
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-stress-control-api
+  namespace: sentinel-system
+spec:
+  mode: one
+  selector:
+    labelSelectors:
+      app: control-api
+  stressors:
+    cpu:
+      workers: 4
+      load: 90
+  duration: 5m
+
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: memory-stress-pipeline-controller
+  namespace: sentinel-system
+spec:
+  mode: one
+  selector:
+    labelSelectors:
+      app: pipeline-controller
+  stressors:
+    memory:
+      workers: 2
+      size: '512MB'
+  duration: 3m
+
+---
+# Test: API remains responsive under CPU pressure
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: cpu-stress-responsiveness
+  namespace: sentinel-system
+spec:
+  entry: stress-and-monitor
+  templates:
+    - name: stress-and-monitor
+      templateType: Parallel
+      deadline: 10m
+      children:
+        - apply-cpu-stress
+        - monitor-api-latency
+
+    - name: apply-cpu-stress
+      templateType: StressChaos
+      deadline: 10m
+      stressChaos:
+        mode: all
+        selector:
+          labelSelectors:
+            app: control-api
+        stressors:
+          cpu:
+            workers: 4
+            load: 95
+        duration: 8m
+
+    - name: monitor-api-latency
+      templateType: Task
+      deadline: 10m
+      task:
+        container:
+          name: monitor
+          image: williamyeh/hey:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Continuously measure API latency
+              hey -z 8m -c 10 -q 5 http://control-api:8000/health > /tmp/results.txt
+
+              # Check p95 latency is acceptable
+              P95=$(grep "95%" /tmp/results.txt | awk '{print $2}')
+              echo "P95 latency: $P95"
+
+              # Parse latency (assuming format like "0.1234 secs")
+              LATENCY_MS=$(echo "$P95" | awk '{print $1 * 1000}')
+
+              if [ "$LATENCY_MS" -lt 2000 ]; then
+                echo "✓ Latency acceptable under stress"
+                exit 0
+              else
+                echo "❌ Latency exceeded threshold: ${LATENCY_MS}ms"
+                exit 1
+              fi
+
+---
+# IO stress test
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: io-delay-database
+  namespace: sentinel-system
+spec:
+  action: latency
+  mode: one
+  selector:
+    labelSelectors:
+      app: postgresql
+  volumePath: /var/lib/postgresql/data
+  path: '*'
+  delay: '500ms'
+  percent: 50
+  duration: 5m
+
+---
+# Test: OOM killer scenario
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: oom-recovery-test
+  namespace: sentinel-system
+spec:
+  entry: oom-and-recover
+  templates:
+    - name: oom-and-recover
+      templateType: Serial
+      deadline: 10m
+      children:
+        - trigger-oom
+        - wait-for-recovery
+        - verify-healthy
+
+    - name: trigger-oom
+      templateType: StressChaos
+      deadline: 3m
+      stressChaos:
+        mode: one
+        selector:
+          labelSelectors:
+            app: control-api
+        stressors:
+          memory:
+            workers: 4
+            size: '2GB'  # Exceeds pod limit, should trigger OOM
+        duration: 2m
+
+    - name: wait-for-recovery
+      templateType: Suspend
+      deadline: 2m
+      suspend:
+        duration: 90s
+
+    - name: verify-healthy
+      templateType: Task
+      deadline: 2m
+      task:
+        container:
+          name: verify
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Kubernetes should have restarted the pod
+              curl -f http://control-api:8000/health || exit 1
+              echo "✓ Recovered from OOM"
+
+---
+# Combined stress test (CPU + memory + IO)
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: combined-resource-stress
+  namespace: sentinel-system
+spec:
+  entry: all-resource-stress
+  templates:
+    - name: all-resource-stress
+      templateType: Parallel
+      deadline: 10m
+      children:
+        - cpu-stress
+        - memory-stress
+        - io-stress
+        - continuous-load
+
+    - name: cpu-stress
+      templateType: StressChaos
+      deadline: 8m
+      stressChaos:
+        mode: all
+        selector:
+          labelSelectors:
+            component: sentinel
+        stressors:
+          cpu:
+            workers: 2
+            load: 80
+        duration: 7m
+
+    - name: memory-stress
+      templateType: StressChaos
+      deadline: 8m
+      stressChaos:
+        mode: all
+        selector:
+          labelSelectors:
+            component: sentinel
+        stressors:
+          memory:
+            workers: 1
+            size: '256MB'
+        duration: 7m
+
+    - name: io-stress
+      templateType: IOChaos
+      deadline: 8m
+      ioChaos:
+        action: latency
+        mode: all
+        selector:
+          labelSelectors:
+            component: sentinel
+        volumePath: /tmp
+        path: '*'
+        delay: '200ms'
+        percent: 30
+        duration: 7m
+
+    - name: continuous-load
+      templateType: Task
+      deadline: 8m
+      task:
+        container:
+          name: load
+          image: williamyeh/hey:latest
+          command:
+            - hey
+            - -z
+            - 7m
+            - -c
+            - '20'
+            - -q
+            - '10'
+            - http://control-api:8000/api/v1/workloads

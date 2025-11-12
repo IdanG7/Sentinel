@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     max_batch_size: int = 1000
     max_batch_age_seconds: int = 30
 
+    # InfraMind REST API Settings (for decision brain)
+    inframind_api_url: str = "http://localhost:8081"
+    inframind_api_key: str = ""
+    inframind_api_enabled: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

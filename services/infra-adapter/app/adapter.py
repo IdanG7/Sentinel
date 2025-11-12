@@ -11,6 +11,7 @@ from aiokafka import AIOKafkaConsumer
 
 from .config import Settings
 from .grpc_client import InfraMindClient
+from .inframind_client import InfraMindDecisionClient
 from .telemetry import TelemetryCollector
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,10 @@ class InfraMindAdapter:
         # Initialize components
         self.telemetry_collector = TelemetryCollector(settings)
         self.grpc_client = InfraMindClient(settings)
+        self.inframind_brain = InfraMindDecisionClient(
+            base_url=settings.inframind_api_url,
+            api_key=settings.inframind_api_key if settings.inframind_api_key else None,
+        )
         self.consumer: AIOKafkaConsumer | None = None
         self.http_client: httpx.AsyncClient | None = None
 
@@ -63,12 +68,21 @@ class InfraMindAdapter:
         )
         logger.info("✓ HTTP client initialized")
 
-        # Initialize gRPC client to InfraMind
+        # Initialize InfraMind Decision Brain (REST API)
+        if self.settings.inframind_api_enabled:
+            try:
+                await self.inframind_brain.connect()
+                logger.info("✓ InfraMind Decision Brain connected")
+            except Exception as e:
+                logger.warning(f"Could not connect to InfraMind Brain: {e}")
+                logger.info("Continuing without InfraMind Brain (will use fallback logic)")
+
+        # Initialize gRPC client to InfraMind (legacy)
         try:
             await self.grpc_client.connect()
         except Exception as e:
-            logger.warning(f"Could not connect to InfraMind: {e}")
-            logger.info("Continuing without InfraMind connection (will retry later)")
+            logger.warning(f"Could not connect to InfraMind gRPC: {e}")
+            logger.info("Continuing without InfraMind gRPC connection")
 
         # Initialize Kafka consumer for events
         self.consumer = AIOKafkaConsumer(
@@ -88,12 +102,17 @@ class InfraMindAdapter:
         event_task = asyncio.create_task(self._event_collection_loop())
         self._tasks.append(event_task)
 
-        # Start action plan receiver from InfraMind
+        # Start InfraMind Brain decision loop (actively requests optimizations)
+        if self.settings.inframind_api_enabled:
+            decision_task = asyncio.create_task(self._inframind_decision_loop())
+            self._tasks.append(decision_task)
+
+        # Start action plan receiver from InfraMind gRPC (legacy)
         if self.grpc_client.connected:
             action_plan_task = asyncio.create_task(self._receive_action_plans())
             self._tasks.append(action_plan_task)
         else:
-            logger.warning("Skipping action plan receiver (not connected to InfraMind)")
+            logger.warning("Skipping gRPC action plan receiver (not connected)")
 
         logger.info("Adapter started")
 
@@ -119,6 +138,7 @@ class InfraMindAdapter:
 
         # Disconnect from InfraMind
         await self.grpc_client.disconnect()
+        await self.inframind_brain.disconnect()
 
         logger.info("Adapter stopped")
 
@@ -209,11 +229,24 @@ class InfraMindAdapter:
         logger.info(f"Sending telemetry batch of {batch_size} points to InfraMind")
 
         try:
-            # Send telemetry via gRPC
+            # Send telemetry to InfraMind Brain (REST API) - PRIMARY METHOD
+            if self.settings.inframind_api_enabled:
+                try:
+                    result = await self.inframind_brain.send_telemetry(self._telemetry_batch)
+                    logger.info(f"✓ Sent {batch_size} telemetry points to InfraMind Brain")
+                    # Clear batch on success
+                    self._telemetry_batch.clear()
+                    self._last_batch_time = datetime.utcnow()
+                    return
+                except Exception as e:
+                    logger.warning(f"Failed to send to InfraMind Brain: {e}")
+                    # Fall through to gRPC fallback
+
+            # Send telemetry via gRPC (fallback/legacy)
             if self.grpc_client.connected:
                 ack = await self.grpc_client.send_telemetry_batch(self._telemetry_batch)
                 if ack.success:
-                    logger.info(f"✓ Sent {batch_size} telemetry points: {ack.message}")
+                    logger.info(f"✓ Sent {batch_size} telemetry points via gRPC: {ack.message}")
                     # Clear batch on success
                     self._telemetry_batch.clear()
                     self._last_batch_time = datetime.utcnow()
@@ -221,16 +254,170 @@ class InfraMindAdapter:
                     logger.error(f"Failed to send telemetry: {ack.message}")
                     # Keep batch for retry
             else:
-                logger.warning("Not connected to InfraMind, keeping batch for retry")
-                # Try to reconnect
-                try:
-                    await self.grpc_client.connect()
-                except Exception as e:
-                    logger.debug(f"Reconnection failed: {e}")
+                logger.warning("Not connected to any InfraMind endpoint, keeping batch for retry")
 
         except Exception as e:
             logger.error(f"Error sending telemetry batch: {e}", exc_info=True)
             # Keep batch for retry
+
+    async def _inframind_decision_loop(self) -> None:
+        """
+        Periodically request optimization decisions from InfraMind Brain.
+
+        This is the KEY integration point where InfraMind's intelligence
+        is applied to generate action plans for Sentinel.
+        """
+        logger.info("Starting InfraMind decision loop...")
+
+        # Poll interval - how often to ask InfraMind for optimization suggestions
+        decision_interval_seconds = 300  # 5 minutes
+
+        try:
+            while self._running:
+                await asyncio.sleep(decision_interval_seconds)
+
+                try:
+                    # Get current cluster context for InfraMind
+                    context = await self._build_decision_context()
+
+                    # Ask InfraMind Brain for optimization suggestions
+                    logger.info("Requesting optimization suggestions from InfraMind Brain...")
+                    decisions = await self.inframind_brain.get_optimization_suggestions(
+                        cluster_id=self.settings.service_name,
+                        context=context,
+                    )
+
+                    if decisions:
+                        logger.info(
+                            f"✓ InfraMind Brain provided {len(decisions)} optimization decisions"
+                        )
+
+                        # Convert InfraMind decisions to Sentinel action plan
+                        action_plan = self._convert_to_action_plan(decisions)
+
+                        # Forward to Control API
+                        await self._submit_action_plan_to_control_api(action_plan)
+
+                    else:
+                        logger.debug("No optimization suggestions from InfraMind at this time")
+
+                except Exception as e:
+                    logger.error(f"Error in InfraMind decision loop: {e}", exc_info=True)
+                    # Continue running even if one iteration fails
+
+        except asyncio.CancelledError:
+            logger.info("InfraMind decision loop cancelled")
+        except Exception as e:
+            logger.error(f"Fatal error in InfraMind decision loop: {e}", exc_info=True)
+
+    async def _build_decision_context(self) -> dict[str, Any]:
+        """
+        Build context information for InfraMind decision-making.
+
+        Returns:
+            Dictionary with current state, metrics, and workload info
+        """
+        # TODO: Fetch real cluster state from Control API or Prometheus
+        # For now, return minimal context
+        context = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "cluster_id": self.settings.service_name,
+            "telemetry_batch_size": len(self._telemetry_batch),
+        }
+
+        # Try to get workload summary from Control API
+        if self.http_client:
+            try:
+                response = await self.http_client.get("/workloads")
+                if response.status_code == 200:
+                    workloads = response.json()
+                    context["workload_count"] = len(workloads)
+                    context["workloads"] = workloads[:10]  # Send summary of first 10
+            except Exception as e:
+                logger.debug(f"Could not fetch workloads for context: {e}")
+
+        return context
+
+    def _convert_to_action_plan(self, decisions: list[dict[str, Any]]) -> dict[str, Any]:
+        """
+        Convert InfraMind decisions to Sentinel action plan format.
+
+        Args:
+            decisions: List of decisions from InfraMind
+
+        Returns:
+            Action plan in Sentinel format
+        """
+        import uuid
+
+        plan_id = str(uuid.uuid4())
+
+        # Convert InfraMind decision format to Sentinel decision format
+        sentinel_decisions = []
+        for decision in decisions:
+            sentinel_decision = {
+                "verb": decision.get("action", "scale"),  # e.g., scale, restart, migrate
+                "target": decision.get("target", {}),      # Resource to act on
+                "params": decision.get("params", {}),      # Action parameters
+                "ttl": decision.get("ttl", 3600),          # Time to live
+                "safety": decision.get("safety"),          # Safety constraints
+            }
+            sentinel_decisions.append(sentinel_decision)
+
+        action_plan = {
+            "plan_id": plan_id,
+            "source": "inframind-brain",
+            "decisions": sentinel_decisions,
+            "created_at": datetime.utcnow().isoformat(),
+            "correlation_id": plan_id,
+        }
+
+        return action_plan
+
+    async def _submit_action_plan_to_control_api(self, action_plan: dict[str, Any]) -> None:
+        """
+        Submit action plan to Control API for execution.
+
+        Args:
+            action_plan: Action plan from InfraMind
+        """
+        if not self.http_client:
+            logger.error("HTTP client not initialized")
+            return
+
+        plan_id = action_plan.get("plan_id")
+        logger.info(f"Submitting action plan {plan_id} to Control API")
+
+        try:
+            response = await self.http_client.post(
+                "/action-plans",
+                json=action_plan,
+                headers=(
+                    {"Authorization": f"Bearer {self.settings.control_api_token}"}
+                    if self.settings.control_api_token
+                    else {}
+                ),
+            )
+
+            response.raise_for_status()
+            logger.info(f"✓ Action plan {plan_id} submitted successfully to Control API")
+
+            # Report success back to InfraMind for learning
+            await self.inframind_brain.report_execution_outcome(
+                plan_id=plan_id,
+                success=True,
+                metrics={"submitted_at": datetime.utcnow().isoformat()},
+            )
+
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to submit action plan to Control API: {e}")
+
+            # Report failure to InfraMind
+            await self.inframind_brain.report_execution_outcome(
+                plan_id=plan_id,
+                success=False,
+                metrics={"error": str(e)},
+            )
 
     async def _receive_action_plans(self) -> None:
         """
