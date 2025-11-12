@@ -69,7 +69,7 @@ class InfraMindDecisionClient:
                 json={"batch": telemetry_batch},
             )
             response.raise_for_status()
-            result = response.json()
+            result: dict[str, Any] = response.json()
             logger.info(f"✓ Telemetry sent successfully: {result.get('message', 'OK')}")
             return result
 
@@ -108,7 +108,7 @@ class InfraMindDecisionClient:
             response.raise_for_status()
             result = response.json()
 
-            decisions = result.get("decisions", [])
+            decisions: list[dict[str, Any]] = result.get("decisions", [])
             logger.info(
                 f"✓ Received {len(decisions)} optimization suggestions "
                 f"(confidence: {result.get('confidence', 0.0):.2f})"

@@ -386,6 +386,10 @@ class InfraMindAdapter:
             return
 
         plan_id = action_plan.get("plan_id")
+        if not plan_id or not isinstance(plan_id, str):
+            logger.error("Invalid or missing plan_id in action plan")
+            return
+
         logger.info(f"Submitting action plan {plan_id} to Control API")
 
         try:

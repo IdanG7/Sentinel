@@ -83,11 +83,14 @@ ROLE_PERMISSIONS: dict[Role, list[Permission]] = {
     ],
     Role.ADMIN: [
         # All permissions except system admin
-        perm for perm in Permission if perm != Permission.SYSTEM_ADMIN
+        perm
+        for perm in Permission
+        if perm != Permission.SYSTEM_ADMIN
     ],
     Role.SYSTEM: [
         # All permissions (internal service-to-service)
-        perm for perm in Permission
+        perm
+        for perm in Permission
     ],
 }
 
@@ -328,32 +331,40 @@ class RBACMiddleware:
                 # TODO: Decode JWT and load user
                 # For now, parse role from token (dev only!)
                 if "admin" in token:
-                    scope["state"] = {"user": User(
-                        id="admin-1",
-                        username="admin",
-                        email="admin@example.com",
-                        role=Role.ADMIN,
-                    )}
+                    scope["state"] = {
+                        "user": User(
+                            id="admin-1",
+                            username="admin",
+                            email="admin@example.com",
+                            role=Role.ADMIN,
+                        )
+                    }
                 elif "operator" in token:
-                    scope["state"] = {"user": User(
-                        id="operator-1",
-                        username="operator",
-                        email="operator@example.com",
-                        role=Role.OPERATOR,
-                    )}
+                    scope["state"] = {
+                        "user": User(
+                            id="operator-1",
+                            username="operator",
+                            email="operator@example.com",
+                            role=Role.OPERATOR,
+                        )
+                    }
                 else:
-                    scope["state"] = {"user": User(
-                        id="viewer-1",
-                        username="viewer",
-                        email="viewer@example.com",
-                        role=Role.VIEWER,
-                    )}
+                    scope["state"] = {
+                        "user": User(
+                            id="viewer-1",
+                            username="viewer",
+                            email="viewer@example.com",
+                            role=Role.VIEWER,
+                        )
+                    }
             else:
                 # No auth header - set viewer by default (dev only!)
-                scope["state"] = {"user": User(
-                    id="anonymous",
-                    username="anonymous",
-                    role=Role.VIEWER,
-                )}
+                scope["state"] = {
+                    "user": User(
+                        id="anonymous",
+                        username="anonymous",
+                        role=Role.VIEWER,
+                    )
+                }
 
         await self.app(scope, receive, send)
