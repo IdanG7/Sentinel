@@ -1,0 +1,97 @@
+name: PatchBot Integration Test
+
+on:
+  push:
+    branches:
+      - test/patchbot-*
+  workflow_dispatch:
+    inputs:
+      failure_type:
+        description: 'Type of failure to trigger'
+        required: true
+        default: 'linting'
+        type: choice
+        options:
+          - linting
+          - formatting
+          - type_check
+
+jobs:
+  test-linting:
+    name: Test Linting (PatchBot will fix)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.failure_type == 'linting' || contains(github.ref, 'lint')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install ruff
+
+      - name: Run linting (will fail on test branch)
+        run: |
+          # This will fail if there are linting errors in test files
+          ruff check tests/patchbot-examples/ --exit-non-zero-on-fix
+
+  test-formatting:
+    name: Test Formatting (PatchBot will fix)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.failure_type == 'formatting' || contains(github.ref, 'format')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install black
+
+      - name: Run formatting check (will fail on test branch)
+        run: |
+          # This will fail if there are formatting issues
+          black --check tests/patchbot-examples/
+
+  test-type-check:
+    name: Test Type Checking (PatchBot will fix)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.failure_type == 'type_check' || contains(github.ref, 'type')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install mypy
+
+      - name: Run type checking (will fail on test branch)
+        run: |
+          # This will fail if there are type errors
+          mypy tests/patchbot-examples/ --strict
+
+  notify-failure:
+    name: Trigger PatchBot on Failure
+    runs-on: ubuntu-latest
+    needs: [test-linting, test-formatting, test-type-check]
+    if: failure()
+
+    steps:
+      - name: Workflow Failed
+        run: |
+          echo "::notice::CI failed! PatchBot should receive webhook and attempt to fix."
+          echo "::notice::Check Agent Controller at http://localhost:8003/api/v1/tasks"
+          echo "::notice::Check Failure Ingestion at http://localhost:8004/health"
