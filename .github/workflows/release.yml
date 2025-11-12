@@ -159,6 +159,10 @@ jobs:
             echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Download dependencies
+        working-directory: services/agent
+        run: go mod download
+
       - name: Build binary
         working-directory: services/agent
         env:
@@ -201,7 +205,6 @@ jobs:
         run: |
           helm package charts/sentinel-core --version ${{ steps.version.outputs.VERSION }} --app-version ${{ steps.version.outputs.VERSION }}
           helm package charts/sentinel-agent --version ${{ steps.version.outputs.VERSION }} --app-version ${{ steps.version.outputs.VERSION }}
-          helm package charts/obs-stack --version ${{ steps.version.outputs.VERSION }}
 
       - name: Upload chart packages
         uses: actions/upload-artifact@v4
