@@ -19,7 +19,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/sentinel
 
 permissions:
   contents: write
@@ -36,6 +35,11 @@ jobs:
         service: [control-api, pipeline-controller, infra-adapter, agent]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set lowercase image prefix
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER_LC}/sentinel" >> $GITHUB_ENV
 
       - name: Extract version
         id: version
@@ -60,11 +64,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          images: ${{ env.IMAGE_PREFIX_LC }}-${{ matrix.service }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
+            type=raw,value=${{ steps.version.outputs.VERSION }},enable=${{ github.event_name != 'push' }}
             type=sha
 
       - name: Build and push image
@@ -86,11 +91,11 @@ jobs:
 
       - name: Pull image for SBOM generation
         run: |
-          docker pull --platform linux/amd64 ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
+          docker pull --platform linux/amd64 ${{ env.IMAGE_PREFIX_LC }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
 
       - name: Generate SBOM
         run: |
-          syft scan docker:${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }} \
+          syft scan docker:${{ env.IMAGE_PREFIX_LC }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }} \
             -o spdx-json=sbom-${{ matrix.service }}.spdx.json
 
       - name: Upload SBOM
@@ -108,6 +113,11 @@ jobs:
       matrix:
         service: [control-api, pipeline-controller, infra-adapter, agent]
     steps:
+      - name: Set lowercase image prefix
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER_LC}/sentinel" >> $GITHUB_ENV
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
@@ -130,7 +140,7 @@ jobs:
       - name: Sign image with keyless signing
         run: |
           cosign sign --yes \
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
+            ${{ env.IMAGE_PREFIX_LC }}-${{ matrix.service }}:${{ steps.version.outputs.VERSION }}
 
   # Build Go binaries for multiple platforms
   build-binaries:
@@ -229,6 +239,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set lowercase owner
+        id: owner
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "OWNER_LC=${OWNER_LC}" >> $GITHUB_OUTPUT
+
       - name: Extract version
         id: version
         run: |
@@ -261,14 +277,14 @@ jobs:
             ${{ steps.changelog.outputs.CHANGELOG }}
 
             ### Container Images
-            - `ghcr.io/${{ github.repository_owner }}/sentinel-control-api:${{ steps.version.outputs.VERSION }}`
-            - `ghcr.io/${{ github.repository_owner }}/sentinel-pipeline-controller:${{ steps.version.outputs.VERSION }}`
-            - `ghcr.io/${{ github.repository_owner }}/sentinel-infra-adapter:${{ steps.version.outputs.VERSION }}`
-            - `ghcr.io/${{ github.repository_owner }}/sentinel-agent:${{ steps.version.outputs.VERSION }}`
+            - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-control-api:${{ steps.version.outputs.VERSION }}`
+            - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-pipeline-controller:${{ steps.version.outputs.VERSION }}`
+            - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-infra-adapter:${{ steps.version.outputs.VERSION }}`
+            - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-agent:${{ steps.version.outputs.VERSION }}`
 
             ### Installation
             ```bash
-            helm repo add sentinel https://${{ github.repository_owner }}.github.io/sentinel-helm
+            helm repo add sentinel https://${{ steps.owner.outputs.OWNER_LC }}.github.io/sentinel-helm
             helm install sentinel sentinel/sentinel-core --version ${{ steps.version.outputs.VERSION }}
             ```
 
@@ -276,7 +292,7 @@ jobs:
             All images are signed with Cosign keyless signing.
 
             ```bash
-            cosign verify ghcr.io/${{ github.repository_owner }}/sentinel-control-api:${{ steps.version.outputs.VERSION }} \
+            cosign verify ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-control-api:${{ steps.version.outputs.VERSION }} \
               --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
               --certificate-oidc-issuer=https://token.actions.githubusercontent.com
             ```
