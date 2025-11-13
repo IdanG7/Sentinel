@@ -266,13 +266,19 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        shell: bash  # IMPORTANT: disables the default -e
         run: |
+          # Make sure we always write a closing EOF no matter what
           {
             echo "CHANGELOG<<EOF"
 
-            # Try to find previous tag; if it fails, fall back gracefully
-            if prev_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null); then
-              git log --pretty=format:"- %s" "$prev_tag"..HEAD
+            # Try to find a previous tag; if anything fails, fall back
+            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+              if prev_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null); then
+                git log --pretty=format:"- %s" "$prev_tag"..HEAD 2>/dev/null || echo "- Initial release"
+              else
+                echo "- Initial release"
+              fi
             else
               echo "- Initial release"
             fi
