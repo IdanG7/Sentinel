@@ -388,7 +388,7 @@ Check:
 
 ## Next Steps
 
-See `PHASE_5_PLAN.md` for:
+Future enhancements:
 - Additional agent types (LogAnalyzer, ConfigOptimizer)
 - Enhanced validation sandbox
 - Multi-tenancy support
