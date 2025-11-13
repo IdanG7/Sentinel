@@ -102,7 +102,7 @@ jobs:
             -o spdx-json=sbom-${{ matrix.service }}.spdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom-${{ matrix.service }}
           path: sbom-${{ matrix.service }}.spdx.json
@@ -196,7 +196,7 @@ jobs:
             cmd/agent/main.go
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sentinel-agent-${{ matrix.os }}-${{ matrix.arch }}
           path: services/agent/bin/sentinel-agent-*
@@ -228,7 +228,7 @@ jobs:
           helm package charts/sentinel-agent --version ${{ steps.version.outputs.VERSION }} --app-version ${{ steps.version.outputs.VERSION }}
 
       - name: Upload chart packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: helm-charts
           path: "*.tgz"
