@@ -267,11 +267,10 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          {
-            echo 'CHANGELOG<<CHANGELOG_EOF'
-            git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD~1)..HEAD || echo "- Initial release"
-            echo 'CHANGELOG_EOF'
-          } >> $GITHUB_OUTPUT
+          DELIMITER="ghadelimiter_$(uuidgen)"
+          echo "CHANGELOG<<${DELIMITER}" >> "${GITHUB_OUTPUT}"
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD~1)..HEAD >> "${GITHUB_OUTPUT}" 2>/dev/null || echo "- Initial release" >> "${GITHUB_OUTPUT}"
+          echo "${DELIMITER}" >> "${GITHUB_OUTPUT}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
