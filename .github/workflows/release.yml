@@ -267,10 +267,18 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          DELIMITER="ghadelimiter_$(uuidgen)"
-          echo "CHANGELOG<<${DELIMITER}" >> "${GITHUB_OUTPUT}"
-          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD~1)..HEAD >> "${GITHUB_OUTPUT}" 2>/dev/null || echo "- Initial release" >> "${GITHUB_OUTPUT}"
-          echo "${DELIMITER}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "CHANGELOG<<EOF"
+
+            # Try to find previous tag; if it fails, fall back gracefully
+            if prev_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null); then
+              git log --pretty=format:"- %s" "$prev_tag"..HEAD
+            else
+              echo "- Initial release"
+            fi
+
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -278,6 +286,11 @@ jobs:
           name: Sentinel v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           body: |
+            ## Sentinel v${{ steps.version.outputs.VERSION }}
+
+            ### Changes
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
             ### Container Images
             - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-control-api:${{ steps.version.outputs.VERSION }}`
             - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-pipeline-controller:${{ steps.version.outputs.VERSION }}`
