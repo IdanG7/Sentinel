@@ -264,39 +264,12 @@ jobs:
         with:
           path: release-artifacts
 
-      - name: Generate changelog
-        id: changelog
-        shell: bash  # IMPORTANT: disables the default -e
-        run: |
-          # Make sure we always write a closing EOF no matter what
-          {
-            echo "CHANGELOG<<EOF"
-
-            # Try to find a previous tag; if anything fails, fall back
-            if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-              if prev_tag=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null); then
-                git log --pretty=format:"- %s" "$prev_tag"..HEAD 2>/dev/null || echo "- Initial release"
-              else
-                echo "- Initial release"
-              fi
-            else
-              echo "- Initial release"
-            fi
-
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           name: Sentinel v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           body: |
-            ## Sentinel v${{ steps.version.outputs.VERSION }}
-
-            ### Changes
-            ${{ steps.changelog.outputs.CHANGELOG }}
-
             ### Container Images
             - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-control-api:${{ steps.version.outputs.VERSION }}`
             - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-pipeline-controller:${{ steps.version.outputs.VERSION }}`
