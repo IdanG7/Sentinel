@@ -19,6 +19,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  OWNER_LC: ${{ github.repository_owner }}
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/sentinel
 
 permissions:
   contents: write
@@ -38,8 +40,9 @@ jobs:
 
       - name: Set lowercase image prefix
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER_LC}/sentinel" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER,,}/sentinel" >> $GITHUB_ENV
+        env:
+          OWNER: ${{ github.repository_owner }}
 
       - name: Extract version
         id: version
@@ -115,8 +118,9 @@ jobs:
     steps:
       - name: Set lowercase image prefix
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER_LC}/sentinel" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER,,}/sentinel" >> $GITHUB_ENV
+        env:
+          OWNER: ${{ github.repository_owner }}
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -242,8 +246,9 @@ jobs:
       - name: Set lowercase owner
         id: owner
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "OWNER_LC=${OWNER_LC}" >> $GITHUB_OUTPUT
+          echo "OWNER_LC=${OWNER,,}" >> $GITHUB_OUTPUT
+        env:
+          OWNER: ${{ github.repository_owner }}
 
       - name: Extract version
         id: version
