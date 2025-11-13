@@ -259,23 +259,12 @@ jobs:
         with:
           path: release-artifacts
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD~1)..HEAD >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           name: Sentinel v${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
           body: |
-            ## Sentinel v${{ steps.version.outputs.VERSION }}
-
-            ### Changes
-            ${{ steps.changelog.outputs.CHANGELOG }}
-
             ### Container Images
             - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-control-api:${{ steps.version.outputs.VERSION }}`
             - `ghcr.io/${{ steps.owner.outputs.OWNER_LC }}/sentinel-pipeline-controller:${{ steps.version.outputs.VERSION }}`
