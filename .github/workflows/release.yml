@@ -3,22 +3,24 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_call:
     inputs:
       version:
-        description: 'Version to release (e.g., 0.3.0)'
+        description: "Version to release (e.g., 0.3.0)"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 0.3.0)'
+        description: "Version to release (e.g., 0.3.0)"
         required: true
         type: string
 
 env:
   REGISTRY: ghcr.io
+  OWNER_LC: ${{ github.repository_owner }}
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/sentinel
 
 permissions:
   contents: write
@@ -38,8 +40,9 @@ jobs:
 
       - name: Set lowercase image prefix
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER_LC}/sentinel" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER,,}/sentinel" >> $GITHUB_ENV
+        env:
+          OWNER: ${{ github.repository_owner }}
 
       - name: Extract version
         id: version
@@ -115,8 +118,9 @@ jobs:
     steps:
       - name: Set lowercase image prefix
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER_LC}/sentinel" >> $GITHUB_ENV
+          echo "IMAGE_PREFIX_LC=ghcr.io/${OWNER,,}/sentinel" >> $GITHUB_ENV
+        env:
+          OWNER: ${{ github.repository_owner }}
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -165,7 +169,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Extract version
         id: version
@@ -216,7 +220,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
-          version: '3.13.0'
+          version: "3.13.0"
 
       - name: Package charts
         run: |
@@ -227,7 +231,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: helm-charts
-          path: '*.tgz'
+          path: "*.tgz"
 
   # Create GitHub Release
   create-release:
@@ -242,8 +246,9 @@ jobs:
       - name: Set lowercase owner
         id: owner
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "OWNER_LC=${OWNER_LC}" >> $GITHUB_OUTPUT
+          echo "OWNER_LC=${OWNER,,}" >> $GITHUB_OUTPUT
+        env:
+          OWNER: ${{ github.repository_owner }}
 
       - name: Extract version
         id: version
@@ -258,6 +263,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          DELIMITER="ghadelimiter_$(uuidgen)"
+          echo "CHANGELOG<<${DELIMITER}" >> "${GITHUB_OUTPUT}"
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD~1)..HEAD >> "${GITHUB_OUTPUT}" 2>/dev/null || echo "- Initial release" >> "${GITHUB_OUTPUT}"
+          echo "${DELIMITER}" >> "${GITHUB_OUTPUT}"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
